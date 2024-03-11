@@ -48,7 +48,9 @@ void doReadEncoders(){
   int64_t c2 = encoder2.getCount();
   int64_t c3 = encoder3.getCount();
   int64_t c4 = encoder4.getCount();
-  Serial.printf("1: %d 2: %d 3: %d 4: %d ",c1,c2,c3,c4);
+  Serial.printf("1: %i 2: %i 3: %i 4: %i ",(int)c1,(int)c2,(int)c3,(int)c4);
+  //Serial.printf("1: %" PRId64 " 2: %" PRId64 " 3: %" PRId64 " 4: %" PRId64 " ",c1,c2,c3,c4);
+
 
   bool a1 = encoder1.isAttached();
   bool a2 = encoder2.isAttached();
@@ -75,6 +77,14 @@ void setup() {
   setupEnc(&encoder2,enc2a,enc2b); 
   setupEnc(&encoder3,enc3a,enc3b); 
   setupEnc(&encoder4,enc4a,enc4b); 
+
+  /*
+
+   encoder1.attachFullQuad(enc1a, enc1b);
+   encoder1.setCount ( 0 );
+   encoder2.attachFullQuad(enc2a, enc2b);
+   encoder2.setCount ( 0 );
+   */
 
 
 
