@@ -41,6 +41,9 @@ ESP32Encoder encoder3;
 ESP32Encoder encoder4;
 
 Ticker readEncoders;
+Ticker slowReadEncoders;
+
+
 
 
 // (84:f7:03:c0:24:38)
@@ -52,29 +55,22 @@ void setupEnc(ESP32Encoder *encoder,int a, int b){
   encoder->setCount ( 0 );
 }
 
-void doReadEncoders(){
+
+void doReadEncoders(bool print){
   int64_t c1 = encoder1.getCount();
   int64_t c2 = encoder2.getCount();
   int64_t c3 = encoder3.getCount();
   int64_t c4 = encoder4.getCount();
-  Serial.printf("1: %i 2: %i 3: %i 4: %i ",(int)c1,(int)c2,(int)c3,(int)c4);
-  //Serial.printf("1: %" PRId64 " 2: %" PRId64 " 3: %" PRId64 " 4: %" PRId64 " ",c1,c2,c3,c4);
+  if(print){
+    Serial.printf("1: %i 2: %i 3: %i 4: %i ",(int)c1,(int)c2,(int)c3,(int)c4);
+    //Serial.printf("1: %" PRId64 " 2: %" PRId64 " 3: %" PRId64 " 4: %" PRId64 " ",c1,c2,c3,c4);
+  }
 
-
-  bool a1 = encoder1.isAttached();
-  bool a2 = encoder2.isAttached();
-  bool a3 = encoder3.isAttached();
-  bool a4 = encoder4.isAttached();
-
-  Serial.printf("a: %d b: %d c: %d d: %d \n",a1,a2,a3,a4);
-  //MsgPack::bool b = 0;
   MsgPack::arr_t<int> enc1_list {1, 2, (int32_t)c1};
   MsgPack::arr_t<int> enc2_list {1, 2, (int32_t)c2};
 
-  //MsgPack::arr_t<int> encoder_list {enc1_list,enc2_list};
-
   //packer.to_map("h",0,"e",encoder_list);
-  packer.serialize(MsgPack::map_size_t(2), "h",1, "e" , MsgPack::arr_size_t(2), enc1_list, enc2_list);
+  packer.serialize(MsgPack::map_size_t(2), "h",false, "e" , MsgPack::arr_size_t(2), enc1_list, enc2_list);
 
   esp_err_t result = esp_now_send(remotePeerAddress, packer.data(), packer.size()); // send esp-now addPeerMsg
   packer.clear();
@@ -89,6 +85,14 @@ void doReadEncoders(){
     Serial.println(result);
   }
 
+}
+
+void doReadFast(){
+  doReadEncoders(false);
+}
+
+void doReadSlow(){
+  doReadEncoders(true);
 }
 
 
@@ -216,7 +220,8 @@ void setup() {
   //esp_now_register_recv_cb(OnDataRecv);
 
   Serial.begin ( 115200 );
-  readEncoders.attach_ms(1000,doReadEncoders);
+  readEncoders.attach_ms(100,doReadFast);
+  slowReadEncoders.attach_ms(1000,doReadSlow);
   setupPeer();
   Serial.println("setup done");
 }
