@@ -1,20 +1,14 @@
 #include <Arduino.h>
-//#define ESP_ARDUINO_VERSION_MAJOR 3
-
-#if ( defined(ESP_ARDUINO_VERSION_MAJOR) && (ESP_ARDUINO_VERSION_MAJOR >= 3) )
-  #warning ESP_ARDUINO_VERSION_MAJOR
-#else 
-  #error "doh"
-#endif
 #include <freertos/FreeRTOS.h>
-	#include <rom/gpio.h>
+#include <rom/gpio.h>
 #include <ESP32Encoder.h>
 #include <Ticker.h >
 
 #include <esp_now.h>
 #include <WiFi.h>
-#include <MsgPack.h>
 
+
+#include <MsgPack.h>
 MsgPack::Packer packer;
 
 int enc1a = 13;
@@ -35,14 +29,67 @@ int btn2 = 38;
 
 ESP32Encoder encoder1;
 ESP32Encoder encoder2;
-
 ESP32Encoder encoder3;
-
 ESP32Encoder encoder4;
 
 Ticker readEncoders;
 Ticker slowReadEncoders;
 
+enum class InputType{
+  Encoder,
+  Button
+};
+
+
+struct EncInputData{
+  InputType type;
+  int id;
+  int64_t v;
+  int64_t prev_v; 
+  enum class ValueType { FLOAT, INT32, INT64, INT8, BOOL };
+  ValueType vtype;
+  ESP32Encoder *encoder;
+};
+
+//             initilize the structs, why doesn't teh commented code work  gah!@
+//EncInputData e1;
+//e1.encoder = &encoder1;
+EncInputData e1 = {
+  InputType::Encoder,
+  1,
+  0,
+  0,
+  EncInputData::ValueType::INT64,
+  &encoder1
+};
+EncInputData e2 = {
+  InputType::Encoder,
+  2,
+  0,
+  0,
+  EncInputData::ValueType::INT64,
+  &encoder2
+}; 
+EncInputData e3 = {
+  InputType::Encoder,
+  3,
+  0,
+  0,
+  EncInputData::ValueType::INT64,
+  &encoder3
+};
+EncInputData e4 = {
+  InputType::Encoder,
+  4,
+  0,
+  0,
+  EncInputData::ValueType::INT64,
+  &encoder4
+};;
+
+
+#define NUM_ENC 4
+EncInputData encoders[] = {e1,e2,e3,e4};
 
 
 
@@ -55,22 +102,15 @@ void setupEnc(ESP32Encoder *encoder,int a, int b){
   encoder->setCount ( 0 );
 }
 
-
-void doReadEncoders(bool print){
-  int64_t c1 = encoder1.getCount();
-  int64_t c2 = encoder2.getCount();
-  int64_t c3 = encoder3.getCount();
-  int64_t c4 = encoder4.getCount();
-  if(print){
-    Serial.printf("1: %i 2: %i 3: %i 4: %i ",(int)c1,(int)c2,(int)c3,(int)c4);
-    //Serial.printf("1: %" PRId64 " 2: %" PRId64 " 3: %" PRId64 " 4: %" PRId64 " ",c1,c2,c3,c4);
-  }
-
-  MsgPack::arr_t<int> enc1_list {1, 2, (int32_t)c1};
-  MsgPack::arr_t<int> enc2_list {1, 2, (int32_t)c2};
+void sendUpdate(EncInputData encoderData){
+  // TODO: how can the 3rd value be int64_t?
+  MsgPack::arr_t<int> enc1_list {encoderData.id, encoderData.prev_v, encoderData.v};
+  //MsgPack::arr_t<int> enc2_list {1, 2, (int32_t)c2};
 
   //packer.to_map("h",0,"e",encoder_list);
-  packer.serialize(MsgPack::map_size_t(2), "h",false, "e" , MsgPack::arr_size_t(2), enc1_list, enc2_list);
+  //packer.serialize(MsgPack::map_size_t(2), "h",false, "e" , MsgPack::arr_size_t(NUM_ENC), enc1_list, enc2_list);
+  packer.serialize(MsgPack::map_size_t(2), "h",false, "e" , enc1_list);
+
 
   esp_err_t result = esp_now_send(remotePeerAddress, packer.data(), packer.size()); // send esp-now addPeerMsg
   packer.clear();
@@ -84,6 +124,34 @@ void doReadEncoders(bool print){
     Serial.println(" couldn't send msg");
     Serial.println(result);
   }
+
+  
+}
+
+
+void doReadEncoders(bool print){
+
+  for(int i = 0;i < NUM_ENC;i++){
+    encoders[i].v = encoders[i].encoder->getCount();
+
+    if(encoders[i].prev_v != encoders[i].v){
+      
+      
+
+      // set previous value 
+      encoders[i].prev_v = encoders[i].v;
+      sendUpdate(encoders[i]);
+    }
+
+    
+  }
+
+ /*
+   if(print){
+    Serial.printf("1: %i 2: %i 3: %i 4: %i ",(int)e1.v,(int)e2.v,(int)e3.v,(int)e4.v);
+    //Serial.printf("1: %" PRId64 " 2: %" PRId64 " 3: %" PRId64 " 4: %" PRId64 " ",c1,c2,c3,c4);
+  }
+  */
 
 }
 
@@ -220,8 +288,10 @@ void setup() {
   //esp_now_register_recv_cb(OnDataRecv);
 
   Serial.begin ( 115200 );
-  readEncoders.attach_ms(100,doReadFast);
-  slowReadEncoders.attach_ms(1000,doReadSlow);
+
+  // Polling Interval is this timer's value in ms
+  readEncoders.attach_ms(10,doReadFast);
+  //slowReadEncoders.attach_ms(1000,doReadSlow);
   setupPeer();
   Serial.println("setup done");
 }
