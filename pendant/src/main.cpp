@@ -136,11 +136,10 @@ void doReadEncoders(bool print){
 
     if(encoders[i].prev_v != encoders[i].v){
       
-      
 
+      sendUpdate(encoders[i]);
       // set previous value 
       encoders[i].prev_v = encoders[i].v;
-      sendUpdate(encoders[i]);
     }
 
     
@@ -237,6 +236,8 @@ void OnDataRecv(const uint8_t * mac, const uint8_t *incomingData, int len)
 bool espnow_peer_configured = false;
 
 void setupPeer(){
+
+ /// TODO: you need to reset this peering up if the reciever resets
  memcpy(peerInfo.peer_addr, remotePeerAddress, 6);
  peerInfo.channel = 0;  
  peerInfo.encrypt = false;
