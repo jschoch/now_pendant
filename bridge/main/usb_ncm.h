@@ -13,9 +13,14 @@
 #include <stdint.h>
 #include "esp_err.h"
 
-#define STATIC_IP_ADDR "192.168.10.160"
-//#define DEFAULT_GATEWAY "0.0.0.0"
-#define DEFAULT_GATEWAY "192.168.10.22"
+/**
+ * 
+ *   The linuxcnc network should have an IP of 192.168.11.3, the UDP server should be on the same interface?
+ */
+#define STATIC_IP_ADDR "192.168.11.4"
+#define SERVER_IP_ADDR "192.168.11.3"
+#define SERVER_PORT 8080
+#define DEFAULT_GATEWAY "192.168.11.3"
 #define DEFAULT_NETMASK "255.255.255.0"
 
 /**

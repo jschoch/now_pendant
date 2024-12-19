@@ -1,3 +1,4 @@
+#include "usb_ncm.h"
 #include <stdlib.h>
 #include <time.h>
 #include <string.h>
@@ -33,6 +34,7 @@ ESP_NOW_test_data_t ESP_NOW_data;
 
 
 espnow_message_mpg mpgData;
+led_strip_handle_t led_strip;
 
 /* WiFi should start before using ESPNOW */
 void example_wifi_init(void)
@@ -52,10 +54,6 @@ void example_wifi_init(void)
 
 }
 
-// TODO: move this somewhere sensible 
-//const char* target_ip = "192.168.1.210";  // Replace with target IP address
-const char* target_ip = "192.168.1.160";
-const int target_port = 8080;  
 
 void sendShit(const uint8_t *data,int len){
     // Create a UDP socket
@@ -67,8 +65,8 @@ void sendShit(const uint8_t *data,int len){
     // Set up destination address
     struct sockaddr_in server_addr;
     server_addr.sin_family = AF_INET;
-    server_addr.sin_addr.s_addr = inet_addr(target_ip);
-    server_addr.sin_port = htons(target_port);
+    server_addr.sin_addr.s_addr = inet_addr(SERVER_IP_ADDR);
+    server_addr.sin_port = htons(SERVER_PORT);
 
     // Prepare message to send
     //const char* message = "Hello from ESP32!";
@@ -77,6 +75,9 @@ void sendShit(const uint8_t *data,int len){
     int sent = sendto(sock, data, len, 0, (struct sockaddr*)&server_addr, sizeof(server_addr));
     if (sent < 0) {
       ESP_LOGE(__FILE__, "Failed to send UDP message: %d", errno);
+      led_strip_set_pixel(led_strip, 0, 22, 0, 0);
+      led_strip_refresh(led_strip);
+
     } else {
       ESP_LOGI(__FILE__, "UDP message sent: ");
     }
@@ -101,9 +102,10 @@ void example_espnow_recv_cb(const esp_now_recv_info_t *recv_info, const uint8_t 
 
 }
 
-esp_err_t example_espnow_init(void)
+esp_err_t example_espnow_init(led_strip_handle_t led_strip_init)
 {
     /* Initialize ESPNOW and register sending and receiving callback function. */
+    led_strip = led_strip_init;
     ESP_ERROR_CHECK( esp_now_init() );
     ESP_ERROR_CHECK( esp_now_register_recv_cb(example_espnow_recv_cb) );
     return ESP_OK;

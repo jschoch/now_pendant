@@ -62,6 +62,18 @@ void tud_mount_cb(void)
 
 
 
+// Task to reset the led from err msgs
+void blink_task(void *arg) {
+    while (1) {
+
+        vTaskDelay(pdMS_TO_TICKS(1000));
+
+        // Turn off the LED
+        led_strip_set_pixel(led_strip, 0, 0,10,0 );
+        led_strip_refresh(led_strip);
+
+    }
+}
 
 /*------------------------------------------*
  *                 APP MAIN
@@ -92,6 +104,7 @@ void app_main(void)
 
     usb_ncm_init();
     xTaskCreate(udp_server_task, "udp_server", 4096, (void*)1234, 4, NULL);
+    xTaskCreate(blink_task, "LED RESET", 2048, NULL, 5, NULL);
 
     // Setup espnow
     esp_err_t ret = nvs_flash_init();
@@ -108,7 +121,7 @@ void app_main(void)
     led_strip_refresh(led_strip);
     ESP_LOGI(TAG, "wifi init done");
 
-    example_espnow_init();
+    example_espnow_init(led_strip);
     led_strip_set_pixel(led_strip, 0, 0, 0, 16);
     led_strip_refresh(led_strip);
     ESP_LOGI(TAG, "espnow init done");
