@@ -3,11 +3,11 @@
 
 import gramme
 import os
-from gi.repository import GObject
-from gi.repository import GLib
+#from gi.repository import GObject
+#from gi.repository import GLib
 import hal
-from hal_glib import GStat
-GSTAT = GStat()
+#from hal_glib import GStat
+#GSTAT = GStat()
 import sys
 import time
 
@@ -26,7 +26,7 @@ encoder_map = {
     2: 0.5, 
     3: 0.1, 
     4: 0.05, 
-    5: 0.1}
+    5: 0.01}
 
 c = hal.component("now_pendant")
 c.newpin("analog-out-%02d" % dacpinmap[0], hal.HAL_FLOAT, hal.HAL_IN)
@@ -63,37 +63,47 @@ ticker = 0
 
 def scale_ticker(ticker,dir):
     if(dir):
-        if(ticker > 4):
+        if(ticker < 5):
             ticker = ticker + 1
         else:   
-            ticker = 0
+            ticker = 5
     else:
         if(ticker > 0):
             ticker = ticker - 1
         else:   
-            ticker = 4
+            ticker = 0
+    print(f' ticker: {ticker}')
     return ticker
 
 # connect a GSTAT message to a callback function
-GSTAT.connect("mode_manual",test_changed)
-GSTAT.forced_update()
+#GSTAT.connect("mode_manual",test_changed)
+#GSTAT.forced_update()
+
+
+sel_prev = 0
 
 def update_encoders(encoder_list):
     global ticker
-    print(encoder_list)
+    global sel_prev
+    #print(encoder_list)
     c['mpg-count-%02d'% encoder_list[0]] = encoder_list[2]
     if(encoder_list[0] == 4):
-        print("update scale")
-        print("ticker %d" % ticker)
-        if(encoder_list[1] > encoder_list[2]):
-            ticker = scale_ticker(ticker,1)
-            c['jog-scale'] = encoder_map[ticker]
-        else:
+        
+        prev_count = encoder_list[1]
+        count = encoder_list[2]
+        diff = sel_prev - count
+        #print("update scale")
+        #print(f'ticker {ticker} diff{diff}')
+        if(diff > 8 and diff > 0):
             ticker = scale_ticker(ticker,0)
             c['jog-scale'] = encoder_map[ticker]
-        print("ticker %d" % ticker)
-        print(encoder_map[ticker])
-
+            sel_prev = count
+        elif(diff < -8 and diff < 0):
+            ticker = scale_ticker(ticker,1)
+            c['jog-scale'] = encoder_map[ticker]
+            sel_prev = count 
+        #print("ticker %d" % ticker)
+        #print(encoder_map[ticker])
 
 @gramme.server(8080)
 def my_awsome_data_handler(data):
@@ -122,7 +132,10 @@ def nothing():
 if __name__ == "__main__":
     try:
         while 1:
-            GLib.MainLoop().run()
+            #GLib.MainLoop().run()
+            time.sleep(1)
     except (KeyboardInterrupt,):
         #raise SystemExit, 0
         raise SystemExit
+    finally:
+        c.exit()
