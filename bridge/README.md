@@ -12,3 +12,8 @@ NB: Work in progress!
 You should be able to ping the IP set in usb_ncm.h, this may require ifup/ifdown and some network fuddling on the host side.  There are issues with the windows NCM driver, but since this is linuxcnc it shouldn't be a problem.
 
 Once you can test it should "just work" assuming you've set STATIC_IP_ADDR and target_ip
+
+
+You may need a static route like
+
+`sudo ip route add 192.168.10.160/32 via 192.168.10.22 dev usb0`

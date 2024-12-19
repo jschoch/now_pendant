@@ -98,8 +98,11 @@ uint8_t remotePeerAddress[] = {0x84, 0xf7, 0x03, 0xc0, 0x24, 0x38}; // TODO: Imp
 //uint8_t remotePeerAddress[] = {0x24, 0xD7, 0xEB, 0xB7, 0xA7, 0x2C}; // TODO: Implement broadcast with security
 
 void setupEnc(ESP32Encoder *encoder,int a, int b){
-  encoder->attachFullQuad(a, b);
+  //encoder->attachHalfQuad(a, b);
+  encoder->attachFullQuad(a,b);
+  //encoder->attachSingleEdge(a,b);
   encoder->setCount ( 0 );
+  encoder->setFilter(1023);
 }
 
 void sendUpdate(EncInputData encoderData){

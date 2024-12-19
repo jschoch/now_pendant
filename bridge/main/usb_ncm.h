@@ -14,7 +14,8 @@
 #include "esp_err.h"
 
 #define STATIC_IP_ADDR "192.168.10.160"
-#define DEFAULT_GATEWAY "192.168.10.1"
+//#define DEFAULT_GATEWAY "0.0.0.0"
+#define DEFAULT_GATEWAY "192.168.10.22"
 #define DEFAULT_NETMASK "255.255.255.0"
 
 /**

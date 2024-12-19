@@ -14,6 +14,7 @@
 #include "esp_crc.h"
 #include "mystruct.h"
 #include <lwip/sockets.h>
+#include "led_strip.h"
 
 #define ESPNOW_WIFI_MODE WIFI_MODE_STA
 #define ESPNOW_WIFI_IF   ESP_IF_WIFI_STA
@@ -52,7 +53,8 @@ void example_wifi_init(void)
 }
 
 // TODO: move this somewhere sensible 
-const char* target_ip = "192.168.1.210";  // Replace with target IP address
+//const char* target_ip = "192.168.1.210";  // Replace with target IP address
+const char* target_ip = "192.168.1.160";
 const int target_port = 8080;  
 
 void sendShit(const uint8_t *data,int len){
