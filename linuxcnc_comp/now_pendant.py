@@ -3,11 +3,7 @@
 
 import gramme
 import os
-#from gi.repository import GObject
-#from gi.repository import GLib
 import hal
-#from hal_glib import GStat
-#GSTAT = GStat()
 import sys
 import time
 
@@ -75,9 +71,6 @@ def scale_ticker(ticker,dir):
     print(f' ticker: {ticker}')
     return ticker
 
-# connect a GSTAT message to a callback function
-#GSTAT.connect("mode_manual",test_changed)
-#GSTAT.forced_update()
 
 
 sel_prev = 0
@@ -132,10 +125,17 @@ def nothing():
 if __name__ == "__main__":
     try:
         while 1:
-            #GLib.MainLoop().run()
             time.sleep(1)
-    except (KeyboardInterrupt,):
-        #raise SystemExit, 0
+    #except (KeyboardInterrupt,):
+    except KeyboardInterrupt:
+        print("keyboard interrupt, exiting")
         raise SystemExit
+    except Exception as e:
+        print(f"exception {e}")
+        raise SystemExit
+    except:
+        print("2nd except, but what does this actually do?")
+        pass
     finally:
+        print("final final, exiting via c.exit")
         c.exit()
