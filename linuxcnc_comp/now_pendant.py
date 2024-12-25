@@ -20,9 +20,9 @@ encoder_map = {
     0: 0.0,
     1: 1.0, 
     2: 0.5, 
-    3: 0.1, 
-    4: 0.05, 
-    5: 0.01}
+    3: 0.25, 
+    4: 0.01, 
+    5: 0.0025}
 
 c = hal.component("now_pendant")
 c.newpin("analog-out-%02d" % dacpinmap[0], hal.HAL_FLOAT, hal.HAL_IN)
