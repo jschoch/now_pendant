@@ -55,6 +55,7 @@ for i in range(5):
 
 c.newpin("jog-scale",hal.HAL_FLOAT, hal.HAL_IN)
 c.newpin("thetest-1",hal.HAL_BIT, hal.HAL_IN)
+c['jog-scale'] = encoder_map[5]
 c.ready()
 print("now_pendant pin setup done")
 noupdates = 0
@@ -154,8 +155,9 @@ def nothing():
 ################################################################
 #                    MAIN LOOP                                 #
 ################################################################    
-if __name__ == "__main__":
+if __name__ == "__run__":
     try:
+        print("Starting now_pendant loop")
         while 1:
             time.sleep(1)
     #except (KeyboardInterrupt,):
