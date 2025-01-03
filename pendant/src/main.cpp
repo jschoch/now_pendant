@@ -176,7 +176,7 @@ void sendBtnUpdate(int btn_id){
 
 void sendEncUpdate(EncInputData data){
   // Send 4 element array with "e" signaling an encoder msg
-  packer.serialize(MsgPack::arr_size_t(4),false,"e",data.id,data.prev_v,data.v);
+  packer.serialize(MsgPack::arr_size_t(5),false,"e",data.id,data.prev_v,data.v);
   sendUpdate();  
   
 }
@@ -188,13 +188,15 @@ void doReadButtons(){
   for(int i = 0;i < NUM_BUTTONS;i++){
     buttons[i].state = digitalRead(buttons[i].pin);
 
-    // btn goes low
-    if(!buttons[i].state && !buttons[i].pending){
-      Serial.printf("Button %d pressed state: %d\n",i,buttons[i].state);
+    // detect state changes
+    if(buttons[i].state != buttons[i].prev_state && !buttons[i].pending){
+      Serial.printf("Button %d current state: %d prev_state %d\n",i,buttons[i].state,buttons[i].prev_state);
       buttons[i].pending = true;      
       sendBtnUpdate(i);
+      buttons[i].prev_state = buttons[i].state;      
+
     }
-    buttons[i].prev_state = buttons[i].state;    
+    //buttons[i].prev_state = buttons[i].state;    
     
   }
 
