@@ -6,9 +6,11 @@ import subprocess
 
 def run(path):
     try:
-        result = subprocess.run(["python3",path], check=True)
-        print(f"Ran {path}")
-    except subprocess.CalledProcessError as e:
+        with open(path, 'r') as file:
+            source_code = file.read()
+            exec(source_code, globals(), locals())
+            print("Stub launched now_pendant")
+    except Exception as e:
         print(f"NOW_PENDANT error\n\t{e}")
 
 
