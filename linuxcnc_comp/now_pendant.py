@@ -121,6 +121,14 @@ def update_encoders(data_dict):
             sel_prev = count 
     updating = 0
 
+def updateButtons(data_dict):
+    global updating 
+    global noupdates
+    btn_id = data_dict['device_id']
+    print(f"btn pressed {btn_id}")
+    c["digital-in-%02d" % btn_id] = data_dict['state']
+
+
 @gramme.server(8080)
 def my_awsome_data_handler(data):
     try:
@@ -131,6 +139,8 @@ def my_awsome_data_handler(data):
         if data_dict['device_type'] == "enc":
             print("got to update encoders")
             update_encoders(data_dict)
+        if data_dict['device_type'] == 'btn':
+            updateButtons(data_dict)
         return 0
     except KeyboardInterrupt:
         raise SystemExit
