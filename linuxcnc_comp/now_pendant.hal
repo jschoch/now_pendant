@@ -3,8 +3,7 @@ loadusr  -W now_pendant
 
 
 # maps the incrment setting for jogging
-net nowp-jog-scale now_pendant.jog-scale => axis.x.jog-scale axis.z.jog-scale
-#net z-jog-scale mux4.0.out => axis.z.jog-scale
+net signal_now_pendant.jog-scale now_pendant.jog-scale => axis.x.jog-scale axis.z.jog-scale
 
 # enables X for jogging
 setp axis.x.jog-enable 1
@@ -15,9 +14,9 @@ setp axis.z.jog-enable 1
 setp axis.z.jog-vel-mode 1
 
 #  maps the mpg to the X jog magic
-net xencoder-counts  <= now_pendant.mpg-count-01
-net xencoder-counts => axis.x.jog-counts
+net signal_xencoder-counts  <= now_pendant.mpg-count-01
+net signal_xencoder-counts => axis.x.jog-counts
 
 #  maps the mpg to the X jog magic
-net zencoder-counts  <= now_pendant.mpg-count-02
-net zencoder-counts => axis.z.jog-counts
+net signal_zencoder-counts  <= now_pendant.mpg-count-02
+net signal_zencoder-counts => axis.z.jog-counts

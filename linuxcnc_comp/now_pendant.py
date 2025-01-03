@@ -7,6 +7,12 @@ import hal
 import sys
 import time
 
+
+noupdates = 1
+
+sys.path.append("/home/schoch/dev/now_pendant/linuxcnc_comp")
+from Npd import Npd
+
 #print("sup")
 print("Loading now pendant")
 print(f"Python version: {sys.version}")
@@ -50,6 +56,8 @@ for i in range(5):
 c.newpin("jog-scale",hal.HAL_FLOAT, hal.HAL_IN)
 c.newpin("thetest-1",hal.HAL_BIT, hal.HAL_IN)
 c.ready()
+print("now_pendant pin setup done")
+noupdates = 0
 
 def test_changed(obj,data):
     print(" got a flip flop")
@@ -75,18 +83,34 @@ def scale_ticker(ticker,dir):
 
 sel_prev = 0
 
-def update_encoders(encoder_list):
+
+updating = 0
+#def update_encoders(encoder_list):
+def update_encoders(data_dict):
+
+    # TODO: if the pendant resets the counts will be different 
+    #        if the hal component resets the counts will be different.  
+    #       this could lead to violent jogging, need to fix
+    global updating 
+    global noupdates
+    if(updating or noupdates):
+        print(f"skip {updating} {noupdates}")
+        return;
+    updating = 1
     global ticker
     global sel_prev
     #print(encoder_list)
-    c['mpg-count-%02d'% encoder_list[0]] = encoder_list[2]
-    if(encoder_list[0] == 4):
+    #c['mpg-count-%02d'% encoder_list[0]] = encoder_list[2]
+    enc_id = data_dict['device_id']
+    enc_count = data_dict['count']
+    print (f"updating encoder {enc_id} t: {type(enc_id)} count: {enc_count} t{type(enc_count)}")
+    c['mpg-count-%02d'% enc_id]   = data_dict['count']
+    if(enc_id == 4):
         
-        prev_count = encoder_list[1]
-        count = encoder_list[2]
+        prev_count = data_dict['prev_count']
+        count = data_dict['count']
         diff = sel_prev - count
-        #print("update scale")
-        #print(f'ticker {ticker} diff{diff}')
+
         if(diff > 8 and diff > 0):
             ticker = scale_ticker(ticker,0)
             c['jog-scale'] = encoder_map[ticker]
@@ -95,26 +119,24 @@ def update_encoders(encoder_list):
             ticker = scale_ticker(ticker,1)
             c['jog-scale'] = encoder_map[ticker]
             sel_prev = count 
-        #print("ticker %d" % ticker)
-        #print(encoder_map[ticker])
+    updating = 0
 
 @gramme.server(8080)
 def my_awsome_data_handler(data):
-    print( data)
-    #print( bin(data))
-    match data:
-        case {b'h':True}:
-            c['thetest-1'] =  not c['thetest-1']
-            print( "true")
-        case {b'h':False}:
-            print ('got some data')
-            if b'e' in data:
-                #encoder_list = data[b'e']
-                update_encoders( data[b'e'])
-            else:
-                print( ' didnt find encoders')
-        case _:
-            print( "doh")
+    try:
+        print( data)
+        npd = Npd(data)
+        data_dict = npd.parse_data()
+        print(f"parsed data was\n\t{data_dict}")
+        if data_dict['device_type'] == "enc":
+            print("got to update encoders")
+            update_encoders(data_dict)
+        return 0
+    except KeyboardInterrupt:
+        raise SystemExit
+    except Exception as e:
+        print(f"exception: {e}")
+        #raise SystemExit
 
 
 def nothing():
