@@ -23,8 +23,10 @@ int enc3b = 18;
 int enc4a = 19; // b
 int enc4b = 21;
 
-int btn1 = 39;
-int btn2 = 38;
+
+// Don't use 36,39 there are no pullups
+int btn1 = 32; // 
+int btn2 = 33;  // 
 
 
 ESP32Encoder encoder1;
@@ -33,6 +35,7 @@ ESP32Encoder encoder3;
 ESP32Encoder encoder4;
 
 Ticker readEncoders;
+Ticker readBtns;
 Ticker slowReadEncoders;
 
 enum class InputType{
@@ -51,15 +54,25 @@ struct EncInputData{
   ESP32Encoder *encoder;
 };
 
+struct BtnInputData{
+ InputType type;
+ int id; // button ID
+ bool state; // current state of the button
+ bool prev_state; // previous state of the button
+ bool pending; // flag for sending updates
+ int pin; // pin number of the button
+
+};
+
+
+
 //             initilize the structs, why doesn't teh commented code work  gah!@
-//EncInputData e1;
-//e1.encoder = &encoder1;
 EncInputData e1 = {
   InputType::Encoder,
-  1,
-  0,
-  0,
-  EncInputData::ValueType::INT64,
+  1, // encoder ID
+  0, // Encoder count
+  0, // the previous count
+  EncInputData::ValueType::INT64, 
   &encoder1
 };
 EncInputData e2 = {
@@ -85,11 +98,44 @@ EncInputData e4 = {
   0,
   EncInputData::ValueType::INT64,
   &encoder4
-};;
+};
+
+//  THe buttons
+#define NUM_BUTTONS 2
+
+BtnInputData b1 = {
+  InputType::Button,
+  0, // button ID
+  1, // current state of the button
+  1, // previous state of the button
+  0, // pending state
+  btn1
+};
+BtnInputData b2 = {
+  InputType::Button,
+  1, // button ID
+  1, // current state of the button
+  1, // previous state of the button
+  0, // pending state
+  btn2
+};
+
+BtnInputData buttons[] = {b1,b2};
+
 
 
 #define NUM_ENC 4
 EncInputData encoders[] = {e1,e2,e3,e4};
+
+
+void setupButtons() {
+  for (int i = 0; i < NUM_BUTTONS; i++) {
+    Serial.printf("setting pinmode for pin: %d ",buttons[i].pin);
+    pinMode(buttons[i].pin, INPUT_PULLUP);
+  }
+}
+
+
 
 
 
@@ -105,21 +151,9 @@ void setupEnc(ESP32Encoder *encoder,int a, int b){
   encoder->setFilter(1023);
 }
 
-void sendUpdate(EncInputData encoderData){
-  // TODO: how can the 3rd value be int64_t?
-  MsgPack::arr_t<int> enc1_list {encoderData.id, encoderData.prev_v, encoderData.v};
-  //MsgPack::arr_t<int> enc2_list {1, 2, (int32_t)c2};
-
-  //packer.to_map("h",0,"e",encoder_list);
-  //packer.serialize(MsgPack::map_size_t(2), "h",false, "e" , MsgPack::arr_size_t(NUM_ENC), enc1_list, enc2_list);
-  packer.serialize(MsgPack::map_size_t(2), "h",false, "e" , enc1_list);
-
-
+void sendUpdate(){
   esp_err_t result = esp_now_send(remotePeerAddress, packer.data(), packer.size()); // send esp-now addPeerMsg
   packer.clear();
-  //char *mm = "hello";
-  //esp_err_t result = esp_now_send(remotePeerAddress, (uint8_t *) mm, sizeof(mm)); // send esp-now addPeerMsg
-  
 
   if (result == ESP_OK) {
     Serial.print(".");
@@ -128,7 +162,42 @@ void sendUpdate(EncInputData encoderData){
     Serial.println(result);
   }
 
+}
+
+void sendBtnUpdate(int btn_id){
+  //packer.serialize(MsgPack::map_size_t(2), "h",false, "b" , btnData); 
+  // Send 4 element array with "b" signaling a button msg
+  packer.serialize(MsgPack::arr_size_t(4),false,"b",btn_id,buttons[btn_id].state);
+  sendUpdate();
+  // reset state
+  buttons[btn_id].pending= false;
+}
+
+
+void sendEncUpdate(EncInputData data){
+  // Send 4 element array with "e" signaling an encoder msg
+  packer.serialize(MsgPack::arr_size_t(4),false,"e",data.id,data.prev_v,data.v);
+  sendUpdate();  
   
+}
+
+
+
+
+void doReadButtons(){
+  for(int i = 0;i < NUM_BUTTONS;i++){
+    buttons[i].state = digitalRead(buttons[i].pin);
+
+    // btn goes low
+    if(!buttons[i].state && !buttons[i].pending){
+      Serial.printf("Button %d pressed state: %d\n",i,buttons[i].state);
+      buttons[i].pending = true;      
+      sendBtnUpdate(i);
+    }
+    buttons[i].prev_state = buttons[i].state;    
+    
+  }
+
 }
 
 
@@ -138,9 +207,7 @@ void doReadEncoders(bool print){
     encoders[i].v = encoders[i].encoder->getCount();
 
     if(encoders[i].prev_v != encoders[i].v){
-      
-
-      sendUpdate(encoders[i]);
+      sendEncUpdate(encoders[i]);
       // set previous value 
       encoders[i].prev_v = encoders[i].v;
     }
@@ -273,11 +340,16 @@ void setupPeer(){
 
 void setup() {
   // put your setup code here, to run once:
+  Serial.begin ( 115200 );
+
+
   ESP32Encoder::useInternalWeakPullResistors = puType::up;
   setupEnc(&encoder1,enc1a,enc1b); 
   setupEnc(&encoder2,enc2a,enc2b); 
   setupEnc(&encoder3,enc3a,enc3b); 
   setupEnc(&encoder4,enc4a,enc4b); 
+
+  setupButtons();
 
   WiFi.mode(WIFI_MODE_APSTA);
   
@@ -291,10 +363,11 @@ void setup() {
   esp_now_register_send_cb(OnDataSent);
   //esp_now_register_recv_cb(OnDataRecv);
 
-  Serial.begin ( 115200 );
 
   // Polling Interval is this timer's value in ms
   readEncoders.attach_ms(10,doReadFast);
+
+  readBtns.attach_ms(50,doReadButtons);
   //slowReadEncoders.attach_ms(1000,doReadSlow);
   setupPeer();
   Serial.println("setup done");

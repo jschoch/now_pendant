@@ -20,7 +20,7 @@
 #define ESPNOW_WIFI_MODE WIFI_MODE_STA
 #define ESPNOW_WIFI_IF   ESP_IF_WIFI_STA
 
-static const char *TAG = "espnow_example";
+static const char *TAG = "BRIDGE";
 
 typedef struct ESP_NOW_test_data
 {
