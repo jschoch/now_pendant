@@ -151,9 +151,9 @@ void setupEnc(ESP32Encoder *encoder,int a, int b){
   encoder->setFilter(1023);
 }
 
-void sendUpdate(MsgPack::Packer this_packer){
-  esp_err_t result = esp_now_send(remotePeerAddress, this_packer.data(), this_packer.size()); // send esp-now addPeerMsg
-  this_packer.clear();
+void sendUpdate(){
+  esp_err_t result = esp_now_send(remotePeerAddress, packer.data(), packer.size()); // send esp-now addPeerMsg
+  packer.clear();
 
   if (result == ESP_OK) {
     Serial.print(".");
@@ -168,7 +168,7 @@ void sendBtnUpdate(int btn_id){
   //packer.serialize(MsgPack::map_size_t(2), "h",false, "b" , btnData); 
   // Send 4 element array with "b" signaling a button msg
   packer.serialize(MsgPack::arr_size_t(4),false,"b",btn_id,buttons[btn_id].state);
-  sendUpdate(packer);
+  sendUpdate();
   // reset state
   buttons[btn_id].pending= false;
 }
@@ -177,7 +177,7 @@ void sendBtnUpdate(int btn_id){
 void sendEncUpdate(EncInputData data){
   // Send 4 element array with "e" signaling an encoder msg
   packer.serialize(MsgPack::arr_size_t(4),false,"e",data.id,data.prev_v,data.v);
-  sendUpdate(packer);  
+  sendUpdate();  
   
 }
 
