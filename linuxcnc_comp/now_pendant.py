@@ -19,8 +19,10 @@ print(f"Python version: {sys.version}")
 
 
 pinmap = [4,5,6,7,8,9] # 
+btnpinmap = [0,1]
 dacpinmap = [3]  # DAC fixed
 nout = 5
+num_btns = 2
 
 encoder_map = {
     0: 0.0,
@@ -35,6 +37,7 @@ c.newpin("analog-out-%02d" % dacpinmap[0], hal.HAL_FLOAT, hal.HAL_IN)
 c.newparam("analog-out-%02d-offset" % dacpinmap[0], hal.HAL_FLOAT, hal.HAL_RW)
 c.newparam("analog-out-%02d-scale" % dacpinmap[0], hal.HAL_FLOAT, hal.HAL_RW)
 c['analog-out-%02d-scale' % dacpinmap[0]] = 1.0
+
 for port in range(6):
     c.newpin("analog-in-%02d" % port, hal.HAL_FLOAT, hal.HAL_OUT)
     c.newparam("analog-in-%02d-offset" % port, hal.HAL_FLOAT, hal.HAL_RW)
@@ -43,13 +46,14 @@ for port in range(6):
     c['analog-in-%02d-gain' % port] = 1.0
     
 for port in range(nout):
-    c.newpin("digital-out-%02d" % pinmap[port], hal.HAL_BIT, hal.HAL_IN)
-    c.newparam("digital-out-%02d-invert" % pinmap[port], hal.HAL_BIT, hal.HAL_RW)
-for port in range(nout, 6):
-    c.newpin("digital-in-%02d" % pinmap[port], hal.HAL_BIT, hal.HAL_OUT)
-    c.newpin("digital-in-%02d-not" % pinmap[port], hal.HAL_BIT, hal.HAL_OUT)
-    c.newparam("digital-in-%02d-pullup" % pinmap[port], hal.HAL_BIT, hal.HAL_RW)
+    c.newpin("digital-out-%02d" % port, hal.HAL_BIT, hal.HAL_IN)
+    c.newparam("digital-out-%02d-invert" % port, hal.HAL_BIT, hal.HAL_RW)
+
+for port in range(num_btns):
+    c.newpin("digital-in-%02d" % port, hal.HAL_BIT, hal.HAL_OUT)
+    c.newpin("digital-in-%02d-not" % port, hal.HAL_BIT, hal.HAL_OUT)
 c.newpin("network-error", hal.HAL_BIT, hal.HAL_IN)
+
 for i in range(5):
     c.newpin("mpg-count-%02d" % i, hal.HAL_S32, hal.HAL_IN)
 
