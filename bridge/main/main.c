@@ -103,7 +103,13 @@ void app_main(void)
 
 
     usb_ncm_init();
+
+
+    // Setup UDP server
+
     xTaskCreate(udp_server_task, "udp_server", 4096, (void*)1234, 4, NULL);
+
+    // Setup led blinker
     xTaskCreate(blink_task, "LED RESET", 2048, NULL, 5, NULL);
 
     // Setup espnow
