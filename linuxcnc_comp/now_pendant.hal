@@ -20,3 +20,19 @@ net signal_xencoder-counts => axis.x.jog-counts
 #  maps the mpg to the X jog magic
 net signal_zencoder-counts  <= now_pendant.mpg-count-02
 net signal_zencoder-counts => axis.z.jog-counts
+
+
+# use btn0 to pause/resume a program
+loadrt flipflop names=flipflop_resume,flipflop_pause,flipflop_run
+addf flipflop_resume servo-thread
+addf flipflop_pause servo-thread
+addf flipflop_run servo-thread
+
+
+net button-start-pause now_pendant.digital-in-00 => flipflop_pause.clk flipflop_resume.clk flipflop_run.clk
+net is-paused halui.program.is-paused => flipflop_resume.data flipflop_pause.reset
+net is-running halui.program.is-running => flipflop_pause.data flipflop_run.reset flipflop_resume.reset
+net is-idle halui.program.is-idle => flipflop_run.data
+net resume flipflop_resume.out => halui.program.resume
+net pause flipflop_pause.out => halui.program.pause
+net run flipflop_run.out => halui.mode.auto halui.program.run
