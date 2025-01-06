@@ -99,9 +99,45 @@ void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status)
   }
 }
 
+
 // callback function that will be executed when new esp-now data is received
 void OnDataRecv(const uint8_t * mac, const uint8_t *incomingData, int len) 
 {
+    Serial.printf("got a message: len: %i\n",len);
+    MsgPack::Unpacker unpacker;
+
+    bool t = unpacker.feed(incomingData,len);
+    Serial.printf("Unpacker worked?  %s\n",t ? "true": "false");
+    if(t){
+        String s3;
+        int i3;
+        unpacker.feed(incomingData,len);
+        unpacker.from_array(s3,i3);
+        unpacker.clear();
+        Serial.printf("ary  %s : %i\n",s3,i3);
+    }
+    
+
+    /*   This was failed attemps to get unpacking working, array is working
+    String s2  ;
+    int i2 ;
+    //unpacker.deserialize(MsgPack::map_size_t(1), s2, i2);
+    unpacker.feed(incomingData,len);
+    unpacker.from_map(s2,i2);
+    unpacker.clear();
+
+    Serial.printf("trying again....   %s : %i\n",s2,i2);
+
+    
+
+    unpacker.feed(incomingData,len);
+    unpacker.deserialize(s2);
+    unpacker.clear();
+    Serial.printf("single %s \n",s2);
+    */
+    
+
+
     //lastPacketRxTimeMs = millis();
     //Serial.printf("ESP-NOW RX: %d\r\n", len);
     //espnow_peer_configured = true;
@@ -109,7 +145,7 @@ void OnDataRecv(const uint8_t * mac, const uint8_t *incomingData, int len)
       memcpy(&myData, incomingData, sizeof(myData));
 
     } else if (len == sizeof(fb)) { // if rx feedback packet struct. Print it for testing
-      Serial.println("got packet");
+      
       /*
       memcpy(&fb, incomingData, sizeof(fb));
       Serial.printf("FB: Control: %d, IO: %d, UDPSeq: %d\r\n", fb.control, fb.io, fb.udp_seq_num);

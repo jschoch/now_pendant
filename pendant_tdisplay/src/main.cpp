@@ -11,6 +11,7 @@
 
 #include <esp_now.h>
 #include <WiFi.h>
+#include <esp_wifi.h>
 #include <User_Setup_Select.h>
 #include <TFT_eSPI.h>
 TFT_eSPI tft = TFT_eSPI();
@@ -46,8 +47,9 @@ int enc1b = 13;
 
 
 // Don't use 36,39 there are no pullups
-int btn1 = 32; // 
-int btn2 = 33;  // 
+// The builtin buttons on the t-display
+int btn1 = 0; // 
+int btn2 = 34;  // 
 
 int16_t adc0, adc1, adc2, adc3;
 
@@ -243,6 +245,8 @@ void setup() {
   setupButtons();
 
   WiFi.mode(WIFI_MODE_APSTA);
+  //WiFi.setChannel(11);
+  esp_wifi_set_channel(11, WIFI_SECOND_CHAN_NONE);
   
   Serial.printf("WiFi MAC: %s\r\n", WiFi.macAddress().c_str());
 
@@ -252,7 +256,7 @@ void setup() {
   }
   // Once ESPNow is successfully Init, we will register for TX&RX CBs
   esp_now_register_send_cb(OnDataSent);
-  //esp_now_register_recv_cb(OnDataRecv);
+  esp_now_register_recv_cb(OnDataRecv);
 
 
   // Polling Interval is this timer's value in ms
