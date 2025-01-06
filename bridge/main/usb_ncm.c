@@ -7,12 +7,15 @@
 #include "esp_log.h"
 #include "esp_netif.h"
 #include "esp_event.h"
+
+//#include "dhcpserver/dhcpserver_options.h"
+#include "lwip/esp_netif_net_stack.h"
+
 #include "tinyusb.h"
 #include "tinyusb_net.h"
-#include "dhcpserver/dhcpserver_options.h"
-#include "lwip/esp_netif_net_stack.h"
 #include "esp_mac.h"
 #include "usb_ncm.h"
+
 
 static const char *TAG = "tusb_ncm";
 static esp_netif_t *s_netif = NULL;

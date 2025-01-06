@@ -7,5 +7,6 @@ cmake_minimum_required(VERSION 3.5)
 # This example needs a DNS server: let's use the simple DNS server implementation from captive portal example
 #set(EXTRA_COMPONENT_DIRS /home/kaspernyhus/esp/idf-versions/esp-idf/examples/protocols/http_server/captive_portal/components/dns_server)
 
+set(COMPONENTS main)
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(esp_tinyusb_test)

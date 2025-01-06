@@ -1,5 +1,8 @@
 #  now_pendant a linuxcnc pendant 
 
+
+WiFi channel should be set to 11, if you need to change you should change in both the bridge and the pendant code
+
 This is an example of how to collect data and send it via ESP_NOW to Linuxcnc (or something else)
 
 ## pendant: 
@@ -7,6 +10,8 @@ This is an example of how to collect data and send it via ESP_NOW to Linuxcnc (o
 
 ## bridge: 
     this is an esp-idf project that bridges esp_now to UDP via usb networking (NCM)
+
+	for linux you have to run `idf.py set-target esp32s3` or it doesn't build
 
 ## linuxcnc_comp 
     this processes UDP and gets it setup in linuxcnc

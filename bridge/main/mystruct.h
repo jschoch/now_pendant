@@ -9,7 +9,13 @@ typedef struct espnow_message_mpg {
   int mpg1;
 } espnow_message_mpg;
 
+typedef struct espnow_message_ping{
+  int cmd;
+} espnow_message_ping;
+
 extern espnow_message_mpg mpgData;
 extern volatile bool update_ready;
 
+
+//uint8_t broadcast_address[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}; 
 #endif

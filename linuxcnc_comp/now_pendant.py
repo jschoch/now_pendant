@@ -133,7 +133,7 @@ def updateButtons(data_dict):
     print(f"btn pressed {btn_id}")
     c["digital-in-%02d" % btn_id] = data_dict['state']
 
-
+client = gramme.client(host="192.168.11.4", port=8080)
 @gramme.server(8080)
 def my_awsome_data_handler(data):
     try:
@@ -146,6 +146,10 @@ def my_awsome_data_handler(data):
             update_encoders(data_dict)
         if data_dict['device_type'] == 'btn':
             updateButtons(data_dict)
+        
+        #data = {'cmd': 1}
+        data = ['12',22]
+        client.send(data)
         return 0
     except KeyboardInterrupt:
         raise SystemExit
