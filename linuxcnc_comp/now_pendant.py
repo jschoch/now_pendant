@@ -32,6 +32,19 @@ encoder_map = {
     4: 0.01, 
     5: 0.0025}
 
+pot_map = {
+    0: 0.0,
+    1: 0.005,
+    2: 0.01,
+    3: 0.05,
+    4: 0.1,
+    5: 0.5,
+    6: 0.75,
+    7: 1,
+    8: 1.25,
+    9: 1.4
+}
+
 c = hal.component("now_pendant")
 c.newpin("analog-out-%02d" % dacpinmap[0], hal.HAL_FLOAT, hal.HAL_IN)
 c.newparam("analog-out-%02d-offset" % dacpinmap[0], hal.HAL_FLOAT, hal.HAL_RW)
@@ -44,6 +57,14 @@ for port in range(6):
     c.newparam("analog-in-%02d-gain" % port, hal.HAL_FLOAT, hal.HAL_RW)
     
     c['analog-in-%02d-gain' % port] = 1.0
+
+
+# Mapped pot, range 1..10, but could be 1..(size of S32)
+
+for port in range(1):
+    c.newpin("mpot-in-%02d" % port, hal.HAL_S32, hal.HAL_OUT) 
+    #c.newparam("mpot-in-%02d" % port, hal.HAL_S32, hal.HAL_OUT)
+
     
 for port in range(nout):
     c.newpin("digital-out-%02d" % port, hal.HAL_BIT, hal.HAL_IN)
@@ -59,7 +80,9 @@ for i in range(5):
 
 c.newpin("jog-scale",hal.HAL_FLOAT, hal.HAL_IN)
 c.newpin("thetest-1",hal.HAL_BIT, hal.HAL_IN)
+
 c['jog-scale'] = encoder_map[5]
+
 c.ready()
 print("now_pendant pin setup done")
 noupdates = 0
@@ -133,26 +156,43 @@ def updateButtons(data_dict):
     print(f"btn pressed {btn_id}")
     c["digital-in-%02d" % btn_id] = data_dict['state']
 
+def updatePots(data_dict):
+    pot_id = data_dict['device_id']
+    v = data_dict['map_value']
+    print(f"maybe pot {pot_id} changed: {v}")
+    c["mpot-in-%02d" %pot_id] = v
+    if(pot_id == 0):
+        c['jog-scale'] = pot_map[v]
+
 client = gramme.client(host="192.168.11.4", port=8080)
 @gramme.server(8080)
 def my_awsome_data_handler(data):
     try:
         print( data)
-        npd = Npd(data)
-        data_dict = npd.parse_data()
-        print(f"parsed data was\n\t{data_dict}")
-        if data_dict['device_type'] == "enc":
-            print("got to update encoders")
-            update_encoders(data_dict)
-        if data_dict['device_type'] == 'btn':
-            updateButtons(data_dict)
-        
-        #data = {'cmd': 1}
-        #data = ['12',22]
-        #data = {1,'some crap who knows'}
-        #data = [5,"this is a load of crap"]
-        data = [5,[1,2,3,16]]
-        client.send(data)
+        if(data[0] == True):
+            print("got ping msg")
+            data = [7,[0,0,0,0]]
+            client.send(data)
+        else:
+            npd = Npd(data)
+            data_dict = npd.parse_data()
+            print(f"parsed data was\n\t{data_dict}")
+            if data_dict['device_type'] == "enc":
+                print("got to update encoders")
+                update_encoders(data_dict)
+            if data_dict['device_type'] == 'btn':
+                updateButtons(data_dict)
+            if data_dict['device_type'] == 'pot':
+                updatePots(data_dict)
+            else:
+                print("Unknown data type")
+            
+            #data = {'cmd': 1}
+            #data = ['12',22]
+            #data = {1,'some crap who knows'}
+            #data = [5,"this is a load of crap"]
+            data = [5,[1,2,3,16]]
+            client.send(data)
         return 0
     except KeyboardInterrupt:
         raise SystemExit
