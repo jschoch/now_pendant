@@ -23,6 +23,7 @@
 #include "nvs_flash.h"
 #include "enow.h"
 #include "usb_ncm.h"
+#include "blinker.h"
 #include "led_strip.h"
 
 
@@ -33,23 +34,8 @@ volatile bool update_ready = 0;
 
 static const char* TAG = "USB example";
 
-#define BLINK_GPIO 48
-static led_strip_handle_t led_strip;
 
-static void configure_led(void){
-    ESP_LOGI(TAG, "Example configured to blink addressable LED!");
-    /* LED strip initialization with the GPIO and pixels number*/
-    led_strip_config_t strip_config = {
-        .strip_gpio_num = BLINK_GPIO,
-        .max_leds = 1, // at least one LED on board
-    };
-    led_strip_rmt_config_t rmt_config = {
-        .resolution_hz = 10 * 1000 * 1000, // 10MHz
-        .flags.with_dma = false,
-    };
-    ESP_ERROR_CHECK(led_strip_new_rmt_device(&strip_config, &rmt_config, &led_strip));
-    led_strip_clear(led_strip);
-}
+
 
 
 /*------------------------------------------*
@@ -62,26 +48,19 @@ void tud_mount_cb(void)
 
 
 
-// Task to reset the led from err msgs
-void blink_task(void *arg) {
-    while (1) {
 
-        vTaskDelay(pdMS_TO_TICKS(1000));
-
-        // Turn off the LED
-        led_strip_set_pixel(led_strip, 0, 0,10,0 );
-        led_strip_refresh(led_strip);
-
-    }
-}
 
 /*------------------------------------------*
  *                 APP MAIN
  *------------------------------------------*/
 void app_main(void)
 {
-    ESP_LOGI(TAG, "------------ app_main -----------");
+    configure_led();
+    blinkQueue = xQueueCreate(5, sizeof(BlinkCode)); // Create queue
+    xTaskCreatePinnedToCore(blink_task, "LED Control", 8192, NULL, 1, NULL, 1);
 
+    ESP_LOGI(TAG, "------------ app_main -----------");
+    triggerBlink(BLINK_BOOTING);
      
     // do usb ncm stuff
 
@@ -91,10 +70,7 @@ void app_main(void)
     esp_efuse_mac_get_default(mac);
 
     printf("MAC: { 0x%x, 0x%x, 0x%x, 0x%x, 0x%x, 0x%x } \n", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-    configure_led();
 
-    led_strip_set_pixel(led_strip, 0, 16, 0, 5);
-    led_strip_refresh(led_strip);
 
     const tinyusb_config_t tusb_cfg = {
         .external_phy = false,
@@ -121,14 +97,15 @@ void app_main(void)
     ESP_ERROR_CHECK( ret );
     ESP_LOGI(TAG, "first setup done");
 
+    triggerBlink(BLINK_WIFI_CONNECTING);
     example_wifi_init();
+    triggerBlink(BLINK_WIFI_CONNECTED);
 
-    led_strip_set_pixel(led_strip, 0, 0, 16, 5);
-    led_strip_refresh(led_strip);
     ESP_LOGI(TAG, "wifi init done");
 
-    example_espnow_init(led_strip);
-    led_strip_set_pixel(led_strip, 0, 0, 0, 16);
-    led_strip_refresh(led_strip);
+
+    example_espnow_init();
     ESP_LOGI(TAG, "espnow init done");
+
+    triggerBlink(BLINK_NONE);
 }

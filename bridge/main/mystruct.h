@@ -15,6 +15,7 @@ typedef struct espnow_message_ping{
 
 extern espnow_message_mpg mpgData;
 extern volatile bool update_ready;
+extern QueueHandle_t blinkQueue;
 
 
 //uint8_t broadcast_address[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}; 

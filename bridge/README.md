@@ -1,6 +1,6 @@
 # ESP_NOW to UDP bridge
 
-This takes esp_now packets and forwards them via UDP to the ip/port specified in enow.c  as `const char* target_ip `
+This takes esp_now packets and forwards them via UDP to the ip/port specified in usb_ncm.h  as `const char* target_ip `
 
 Thanks to Kasper Nyhus @kaspernyhus  for his repo here: kaspernyhus/esp_tinyusb_test
 

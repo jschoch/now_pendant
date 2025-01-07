@@ -15,6 +15,7 @@
 #include "tinyusb_net.h"
 #include "esp_mac.h"
 #include "usb_ncm.h"
+#include "blinker.h"
 
 
 static const char *TAG = "tusb_ncm";
@@ -36,6 +37,7 @@ static esp_err_t netif_transmit (void *h, void *buffer, size_t len)
 {
     if (usb_ncm_send(buffer, len, NULL) != ESP_OK) {
         ESP_LOGE(TAG, "Failed to send buffer to USB!");
+        triggerBlink(BLINK_USB_ERROR);
     }
     return ESP_OK;
 }

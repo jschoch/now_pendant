@@ -4,6 +4,7 @@ idf_component_register(
         "udp_server.c"
         "usb_ncm.c"
         "enow.c"
+        "blinker.c"
     INCLUDE_DIRS "." ""
     PRIV_REQUIRES esp_wifi nvs_flash
     )

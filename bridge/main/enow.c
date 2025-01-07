@@ -15,8 +15,8 @@
 #include "esp_crc.h"
 #include "mystruct.h"
 #include <lwip/sockets.h>
-#include "led_strip.h"
 #include "enow.h"
+#include "blinker.h"
 
 #define ESPNOW_WIFI_MODE WIFI_MODE_STA
 #define ESPNOW_WIFI_IF   ESP_IF_WIFI_STA
@@ -40,7 +40,6 @@ peer_info_t peers[MAX_PEERS]; // Define MAX_PEERS based on your needs
 int num_peers = 0;
 
 espnow_message_mpg mpgData;
-led_strip_handle_t led_strip;
 
 /* WiFi should start before using ESPNOW */
 void example_wifi_init(void)
@@ -54,7 +53,7 @@ void example_wifi_init(void)
     ESP_ERROR_CHECK( esp_wifi_set_storage(WIFI_STORAGE_RAM) );
     ESP_ERROR_CHECK( esp_wifi_set_mode(ESPNOW_WIFI_MODE) );
     ESP_ERROR_CHECK( esp_wifi_start());
-     ESP_ERROR_CHECK( esp_wifi_set_channel(11, WIFI_SECOND_CHAN_NONE));
+    ESP_ERROR_CHECK( esp_wifi_set_channel(11, WIFI_SECOND_CHAN_NONE));
 
     // enable esp now long range
     //ESP_ERROR_CHECK( esp_wifi_set_protocol(ESPNOW_WIFI_IF, WIFI_PROTOCOL_11B|WIFI_PROTOCOL_11G|WIFI_PROTOCOL_11N|WIFI_PROTOCOL_LR) );
@@ -65,8 +64,16 @@ void example_wifi_init(void)
 void sendShit(const uint8_t *data,int len){
     // Create a UDP socket
     int sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+
+    // set timeout
+    struct timeval timeout;
+    timeout.tv_sec = 0;  // 1-second timeout
+    timeout.tv_usec = 5000;
+    setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, (const char*)&timeout, sizeof(timeout));
+
     if (sock < 0) {
       ESP_LOGE(__FILE__, "Failed to create socket: %d", errno);
+      triggerBlink(BLINK_SERVER_FAILED);
     }
 
     // Set up destination address
@@ -82,8 +89,7 @@ void sendShit(const uint8_t *data,int len){
     int sent = sendto(sock, data, len, 0, (struct sockaddr*)&server_addr, sizeof(server_addr));
     if (sent < 0) {
       ESP_LOGE(__FILE__, "Failed to send UDP message: %d", errno);
-      led_strip_set_pixel(led_strip, 0, 22, 0, 0);
-      led_strip_refresh(led_strip);
+      triggerBlink(BLINK_UDP_ERROR);
 
     } else {
       ESP_LOGI(__FILE__, "UDP message sent: ");
@@ -96,19 +102,17 @@ void sendShit(const uint8_t *data,int len){
 //void example_espnow_recv_cb(const uint8_t *mac_addr, const uint8_t *data, int len)
 void example_espnow_recv_cb(const esp_now_recv_info_t *recv_info, const uint8_t *data, int len)
 {
+
+  // register the peer if we've not seen it
   if (esp_now_is_peer_exist(recv_info->src_addr) == false) {
     if (num_peers < MAX_PEERS) {
       esp_now_peer_info_t peer;
-      //peer->channel = CONFIG_ESPNOW_CHANNEL;
       peer.channel = 11;
       peer.ifidx = ESPNOW_WIFI_IF;
       peer.encrypt = false;
-      //memcpy(peer->lmk, CONFIG_ESPNOW_LMK, ESP_NOW_KEY_LEN);
       memcpy(peer.peer_addr, recv_info->src_addr, ESP_NOW_ETH_ALEN);
       esp_err_t e = esp_now_add_peer(&peer);
       ESP_ERROR_CHECK( e );
-      // why free, why memcopy?
-      //free(peer);
       ESP_LOGE(TAG, "New peer added: ");
       // Print the MAC address of the new peer
       for (int i = 0; i < ESP_NOW_ETH_ALEN; i++) {
@@ -124,13 +128,10 @@ void example_espnow_recv_cb(const esp_now_recv_info_t *recv_info, const uint8_t 
       // Handle case where peer list is full
         // TODO display this error or something
         ESP_LOGE(TAG, "Peer list is full. Cannot add new peer.");
+        triggerBlink(BLINK_PEER_ERROR);
     }
   }
   memcpy(&ESP_NOW_data, data, sizeof(ESP_NOW_data));
-  //ESP_LOGI(TAG, "\nESP id: %d\nData recieved: %d\n\n", ESP_NOW_data.id, ESP_NOW_data.test_value);
-  //int mlen = sizeof(mpgData);
-  //memcpy(&mpgData, data, mlen);
-  //ESP_LOGI(TAG, "\nESP id: %s\nData recieved: %d len: %d mlen %d\n\n", mpgData.a, mpgData.mpg1,len,mlen);
   ESP_LOGI(TAG,"Got data %d",len);
   update_ready = 1;
   sendShit(data,len);
@@ -139,10 +140,9 @@ void example_espnow_recv_cb(const esp_now_recv_info_t *recv_info, const uint8_t 
 
 }
 
-esp_err_t example_espnow_init(led_strip_handle_t led_strip_init)
+esp_err_t example_espnow_init()
 {
     /* Initialize ESPNOW and register sending and receiving callback function. */
-    led_strip = led_strip_init;
     ESP_ERROR_CHECK( esp_now_init() );
     ESP_ERROR_CHECK( esp_now_register_recv_cb(example_espnow_recv_cb) );
     return ESP_OK;

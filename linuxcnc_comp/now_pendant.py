@@ -147,8 +147,8 @@ def my_awsome_data_handler(data):
         if data_dict['device_type'] == 'btn':
             updateButtons(data_dict)
         
-        #data = {'cmd': 1}
-        data = ['12',22]
+        data = {'cmd': 1}
+        #data = ['12',22]
         client.send(data)
         return 0
     except KeyboardInterrupt:
