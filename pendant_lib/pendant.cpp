@@ -116,6 +116,17 @@ void OnDataRecv(const uint8_t * mac, const uint8_t *incomingData, int len)
         unpacker.clear();
         Serial.printf("ary  %s : %i\n",s3,i3);
     }
+
+    // Testing map
+
+    if(t){
+        String s4;
+        int i4;
+        unpacker.feed(incomingData,len);
+        unpacker.from_map(s4,i4);
+        unpacker.clear();
+        Serial.printf("map  %s : %i\n",s4,i4);
+    }
     
 
     /*   This was failed attemps to get unpacking working, array is working
