@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <esp_now.h>
+#include <variant>
 
 
 void setupButtons(){
@@ -100,6 +101,39 @@ void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status)
 }
 
 
+// Structs for processing lcnc msgs
+
+struct Ping {
+    uint32_t sequence_number;
+    MSGPACK_DEFINE(sequence_number);// [sequence_number]
+};
+
+struct State {
+    int system;
+    int machine;
+    int motion;
+    int whatever;
+    MSGPACK_DEFINE(system,machine,motion,whatever); // [system,machine,motion]
+};
+
+struct Amsg{
+    int msg_type;
+    State state;
+    MSGPACK_DEFINE(msg_type,state);
+};
+
+struct Errors{
+    int errornumber;
+    String msg;
+    MSGPACK_DEFINE(errornumber,msg);
+};
+
+enum class MsgType : uint8_t{
+    PING = 7,
+    STATE = 5,
+    ERRORS = 2,
+};
+
 // callback function that will be executed when new esp-now data is received
 void OnDataRecv(const uint8_t * mac, const uint8_t *incomingData, int len) 
 {
@@ -126,6 +160,31 @@ void OnDataRecv(const uint8_t * mac, const uint8_t *incomingData, int len)
         unpacker.from_map(s4,i4);
         unpacker.clear();
         Serial.printf("map  %s : %i\n",s4,i4);
+    }
+
+    if(t){
+        uint8_t msg_type;
+        //std::array<unsigned char, (len-1)> msg;
+        std::vector<unsigned char> msg;
+        unpacker.feed(incomingData,len);
+        unpacker.from_array(msg_type,msg);
+        unpacker.clear();
+        Serial.printf("Got msg type: %u and array %u",msg_type,sizeof(msg));
+        if (msg_type == static_cast<uint8_t>(MsgType::PING)){
+            Serial.println("got a ping");
+        }else if (msg_type == static_cast<uint8_t>(MsgType::STATE)){
+            Serial.println("got a state msg");
+            int a1,a2,a3,a4;
+            Amsg amsg;
+            unpacker.feed(incomingData, len);
+            //unpacker.from_array(a1,a2,a3,a4);
+            unpacker.deserialize(amsg);
+            Serial.printf("t: %u system: %i machine: %i motion: %i whatever: %i\n",amsg.msg_type,amsg.state.system,amsg.state.machine,amsg.state.motion,amsg.state.whatever);
+        }
+        else{
+            Serial.println("Unknown msg");
+        }
+        unpacker.clear();
     }
     
 

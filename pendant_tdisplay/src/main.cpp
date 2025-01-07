@@ -193,7 +193,7 @@ void mockupIdle(){
   tft.printf("ydtg: %.4d\n", y_dtg);
   tft.printf("lcnc state: %s\n", lcnc_state.c_str());
  tft.println("foo\n" );
- Serial.println("mock done");
+ //Serial.println("mock done");
 
 
   
@@ -296,7 +296,7 @@ void loop() {
   mockupIdle();
   adc0 = ads.readADC_SingleEnded(0);
   float volts0 = ads.computeVolts(adc0);
-  Serial.printf("adc0: %d, volts: %f\n",adc0,volts0);
+  //Serial.printf("adc0: %d, volts: %f\n",adc0,volts0);
 
 }
 
