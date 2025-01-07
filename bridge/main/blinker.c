@@ -39,7 +39,7 @@ void configure_led(void){
         .flags.with_dma = false,
     };
     ESP_ERROR_CHECK(led_strip_new_rmt_device(&strip_config, &rmt_config, &led_strip));
-    led_strip_clear(led_strip);
+    //led_strip_clear(led_strip);
 }
 
 
@@ -66,6 +66,7 @@ void blink_task_old(void *arg) {
 
 void blink_task(void *pvParameters) {
     BlinkCode currentCode = BLINK_OK;
+    BlinkCode lastCode = BLINK_NONE;
     TickType_t blinkStartTime = 0;
     uint8_t blinkCount = 0;
 
@@ -73,10 +74,12 @@ void blink_task(void *pvParameters) {
         BlinkCode receivedCode;
         if (xQueueReceive(blinkQueue, &receivedCode, 0) == pdTRUE) {
             // nothing changed 
+            /*
             if(currentCode == receivedCode){
                 vTaskDelay(pdMS_TO_TICKS(10));
                 continue;
             }
+            */
 
             // reset for new code
             currentCode = receivedCode;
@@ -84,11 +87,11 @@ void blink_task(void *pvParameters) {
             blinkCount = 0;
             if (currentCode == BLINK_NONE){
                 led_strip_clear(led_strip);
-                led_strip_refresh(led_strip);
+                //led_strip_refresh(led_strip);
                 vTaskDelay(pdMS_TO_TICKS(10));
                 continue;
             }
-            if (currentCode == BLINK_OK){
+            else if (currentCode == BLINK_OK){
                 led_strip_set_pixel(led_strip, 0, 0, 100,0);
                 led_strip_refresh(led_strip);
                 vTaskDelay(pdMS_TO_TICKS(10));
@@ -122,7 +125,11 @@ void blink_task(void *pvParameters) {
                 }
             }
         } else {
-            led_strip_clear(led_strip);
+            if(currentCode != lastCode){
+                led_strip_set_pixel(led_strip, 0, 0, 100,0);
+                led_strip_refresh(led_strip);
+                lastCode = currentCode;
+            }
             vTaskDelay(pdMS_TO_TICKS(10));
             }
         }

@@ -57,7 +57,7 @@ void app_main(void)
 {
     configure_led();
     blinkQueue = xQueueCreate(5, sizeof(BlinkCode)); // Create queue
-    xTaskCreatePinnedToCore(blink_task, "LED Control", 8192, NULL, 1, NULL, 1);
+    xTaskCreatePinnedToCore(blink_task, "LED Control", 16384, NULL, 1, NULL, 1);
 
     ESP_LOGI(TAG, "------------ app_main -----------");
     triggerBlink(BLINK_BOOTING);
