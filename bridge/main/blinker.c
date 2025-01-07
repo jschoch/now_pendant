@@ -28,7 +28,7 @@ const struct BlinkSequence blinkSequences[] = {
 };
 
 void configure_led(void){
-    ESP_LOGI(TAG, "Example configured to blink addressable LED!");
+    ESP_LOGI(TAG, "SETTING UP LED!");
     /* LED strip initialization with the GPIO and pixels number*/
     led_strip_config_t strip_config = {
         .strip_gpio_num = BLINK_GPIO,
@@ -65,49 +65,65 @@ void blink_task_old(void *arg) {
 
 
 void blink_task(void *pvParameters) {
-  BlinkCode currentCode = BLINK_NONE;
-  TickType_t blinkStartTime = 0;
-  uint8_t blinkCount = 0;
-  uint32_t watermark = uxTaskGetStackHighWaterMark(NULL); // NULL gets the current task
-  ESP_LOGI(TAG, "Stack high water mark: %lu bytes", watermark * sizeof(StackType_t)); //prints in bytes
+    BlinkCode currentCode = BLINK_OK;
+    TickType_t blinkStartTime = 0;
+    uint8_t blinkCount = 0;
 
-  while (1) {
-    BlinkCode receivedCode;
-    if (xQueueReceive(blinkQueue, &receivedCode, 0) == pdTRUE) {
-      currentCode = receivedCode;
-      blinkStartTime = xTaskGetTickCount();
-      blinkCount = 0;
-    }
+    while (1) {
+        BlinkCode receivedCode;
+        if (xQueueReceive(blinkQueue, &receivedCode, 0) == pdTRUE) {
+            // nothing changed 
+            if(currentCode == receivedCode){
+                vTaskDelay(pdMS_TO_TICKS(10));
+                continue;
+            }
 
-    if (currentCode != BLINK_NONE) {
-        for (size_t i = 0; i < sizeof(blinkSequences) / sizeof(blinkSequences[0]); i++) {
-            const struct BlinkSequence *seq = &blinkSequences[i]; // Correct: &blinkSequences[i] is of type struct BlinkSequence*
-            if (seq->code == currentCode) {
-                if (xTaskGetTickCount() - blinkStartTime < pdMS_TO_TICKS(seq->displayDurationMs)) {
-                    if (blinkCount < seq->numBlinks * 2) { // *2 because we need on and off states
-                        if (blinkCount % 2 == 0) {
-                            // LED ON
-                            led_strip_set_pixel(led_strip, 0, seq->r, seq->g, seq->b);
-                            led_strip_refresh(led_strip);
-                            vTaskDelay(pdMS_TO_TICKS(seq->onDurationMs));
-                        } else {
-                            // LED OFF
-                            led_strip_clear(led_strip);
-                            vTaskDelay(pdMS_TO_TICKS(seq->offDurationMs));
-                        }
-                        blinkCount++;
-                    } else {
-                        currentCode = BLINK_NONE; // Reset after complete sequence
-                    }
-                } else {
-                    currentCode = BLINK_NONE;
-                }
-                break;
+            // reset for new code
+            currentCode = receivedCode;
+            blinkStartTime = xTaskGetTickCount();
+            blinkCount = 0;
+            if (currentCode == BLINK_NONE){
+                led_strip_clear(led_strip);
+                led_strip_refresh(led_strip);
+                vTaskDelay(pdMS_TO_TICKS(10));
+                continue;
+            }
+            if (currentCode == BLINK_OK){
+                led_strip_set_pixel(led_strip, 0, 0, 100,0);
+                led_strip_refresh(led_strip);
+                vTaskDelay(pdMS_TO_TICKS(10));
+                continue;
             }
         }
-    } else {
-        led_strip_clear(led_strip); // Ensure LED is off when no code is active.
-        vTaskDelay(pdMS_TO_TICKS(10)); // Small delay to prevent task starvation
+
+        if (currentCode != BLINK_NONE && currentCode != BLINK_OK) {
+            for (size_t i = 0; i < sizeof(blinkSequences) / sizeof(blinkSequences[0]); i++) {
+                const struct BlinkSequence *seq = &blinkSequences[i];
+                if (seq->code == currentCode) {
+                    if (xTaskGetTickCount() - blinkStartTime < pdMS_TO_TICKS(seq->displayDurationMs)) {
+                        if (blinkCount < seq->numBlinks * 2) {
+                            if (blinkCount % 2 == 0) {
+                                led_strip_set_pixel(led_strip, 0, seq->r, seq->g, seq->b);
+                                led_strip_refresh(led_strip);
+                                vTaskDelay(pdMS_TO_TICKS(seq->onDurationMs));
+                            } else {
+                                led_strip_clear(led_strip);
+                                vTaskDelay(pdMS_TO_TICKS(seq->offDurationMs));
+                            }
+                            blinkCount++;
+                        } else {
+                            currentCode = BLINK_OK; // Reset after complete sequence
+                            break; // Exit the for loop
+                        }
+                    } else {
+                        currentCode = BLINK_OK;
+                        break; // Exit the for loop
+                    }
+                }
+            }
+        } else {
+            led_strip_clear(led_strip);
+            vTaskDelay(pdMS_TO_TICKS(10));
+            }
+        }
     }
-  }
-}
