@@ -30,13 +30,42 @@ const struct BlinkSequence blinkSequences[] = {
 void configure_led(void){
     ESP_LOGI(TAG, "SETTING UP LED!");
     /* LED strip initialization with the GPIO and pixels number*/
+
+
+    /*  FUCK THIS 
+    /// LED strip common configuration
+    led_strip_config_t strip_config = {
+        .strip_gpio_num = BLINK_GPIO,  // The GPIO that connected to the LED strip's data line
+        .max_leds = 1,                 // The number of LEDs in the strip,
+        .led_model = LED_MODEL_WS2812, // LED strip model, it determines the bit timing
+        //.color_component_format = LED_STRIP_COLOR_COMPONENT_FMT_GRB, // The color component format is G-R-B
+        .flags = {
+            .invert_out = false, // don't invert the output signal
+        }
+    };
+
+    /// SPI backend specific configuration
+    led_strip_spi_config_t spi_config = {
+        .clk_src = SPI_CLK_SRC_DEFAULT, // different clock source can lead to different power consumption
+        .spi_bus = SPI2_HOST,           // SPI bus ID
+        .flags = {
+            .with_dma = true, // Using DMA can improve performance and help drive more LEDs
+        }
+    };
+
+    /// Create the LED strip object
+    led_strip_handle_t led_strip;
+    ESP_ERROR_CHECK(led_strip_new_spi_device(&strip_config, &spi_config, &led_strip));
+    */
+
+    // RMT stack dumps no idea why
     led_strip_config_t strip_config = {
         .strip_gpio_num = BLINK_GPIO,
         .max_leds = 1, // at least one LED on board
     };
     led_strip_rmt_config_t rmt_config = {
-        .resolution_hz = 10 * 1000 * 1000, // 10MHz
-        .flags.with_dma = false,
+        .resolution_hz = 10 * 1000 * 100, // 10MHz
+        .flags.with_dma = true,
     };
     ESP_ERROR_CHECK(led_strip_new_rmt_device(&strip_config, &rmt_config, &led_strip));
     //led_strip_clear(led_strip);
@@ -88,14 +117,14 @@ void blink_task(void *pvParameters) {
             
         }
 
-        if (currentCode == BLINK_NONE){
+        if (currentCode == BLINK_NONE && currentCode != lastCode){
             led_strip_clear(led_strip);
             // I think this causes a stack overflow
             //led_strip_refresh(led_strip);
             vTaskDelay(pdMS_TO_TICKS(10));
             continue;
         }
-        else if (currentCode == BLINK_OK){
+        else if (currentCode == BLINK_OK && currentCode != lastCode){
             led_strip_set_pixel(led_strip, 0, 0, 100,0);
             led_strip_refresh(led_strip);
             vTaskDelay(pdMS_TO_TICKS(10));

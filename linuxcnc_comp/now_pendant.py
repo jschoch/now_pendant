@@ -6,6 +6,8 @@ import os
 import hal
 import sys
 import time
+import linuxcnc
+from dataclasses import dataclass, asdict
 
 
 noupdates = 1
@@ -87,6 +89,80 @@ c.ready()
 print("now_pendant pin setup done")
 noupdates = 0
 
+
+#############################################################################################################################################################
+#
+#
+#  "server" logic
+#
+######################################################################################################################################################
+
+class MsgType:
+    PING = 7
+    STATE = 5
+    ERRORS = 2
+    POS = 3
+
+#class State:
+#    def __init__(self, system, machine, motion, homed):
+#        self.system = system
+#        self.machine = machine
+#        self.motion = motion
+#        self.homed = homed 
+
+@dataclass
+class Ping:
+    sequence_number: int
+
+@dataclass
+class State:
+    system: int
+    machine: int
+    motion: int
+    homed: int
+
+@dataclass
+class Amsg:
+    msg_type: MsgType
+    state: State
+
+@dataclass
+class Errors:
+    errornumber: int
+    msg: str  # Python's str is equivalent to C++'s String
+
+@dataclass
+class Pos:
+    x: float = 0.0
+    z: float = 0.0 
+    x_dtg: float = 0.0
+    z_dtg: float = 0.0
+    jog_scale: float   = 0.0# Renamed to follow Python conventions
+    g5x: int = 0
+    x_jog_counts: int = 0 # Renamed to follow Python conventions
+    z_jog_counts: int = 0
+
+def updatePos():
+    global stat
+    # poll should already have recently run, updateState i think
+
+    # actual position should be like this
+    # current trajectory position, (x y z a b c u v w) in machine units. 
+
+    spos = stat.actual_position
+    print(f"spos: {spos}")
+    pos = Pos()
+    pos.x = spos[0]
+    pos.z = spos[2]
+    pos.x_jog_counts = hal.get_value("axis.x.jog-counts")
+    pos.z_jog_counts = hal.get_value("axis.z.jog-counts")
+    pos.jog_scale = hal.get_value("axis.x.jog-scale")
+    print(f"pos: {pos}")
+    pos_dict = asdict(pos) 
+    pos_array = list(pos_dict.values())
+    data = [MsgType.POS,pos_array]
+    return data
+
 def test_changed(obj,data):
     print(" got a flip flop")
     print(data)
@@ -110,6 +186,7 @@ def scale_ticker(ticker,dir):
 
 
 sel_prev = 0
+stat = linuxcnc.stat()
 
 
 updating = 0
@@ -163,6 +240,34 @@ def updatePots(data_dict):
     c["mpot-in-%02d" %pot_id] = v
     if(pot_id == 0):
         c['jog-scale'] = pot_map[v]
+        None
+
+def updateState():
+    global stat
+    stat.poll()
+
+    print(f"lcnc estop\n\t{stat.estop}")
+    print(f"lcnc homed\n\t{stat.homed}")
+    state_msg = State(0,stat.estop,0,0)
+    
+    #state_msg = State(
+    #    system=c["rio.sys-status"], 
+    #    machine=c["iocontrol.0.user-enable-out"],
+    #    #motion=c[""], 
+    #    motion=0, #  not sure what to put here
+    #    home=c["motion.is-all-homed"])
+
+    print(f"Update state {state_msg}")
+
+    data = [
+        7,[
+            state_msg.system,
+            state_msg.machine,
+            state_msg.motion,
+            state_msg.homed
+            ]
+    ]
+    return data,state_msg
 
 client = gramme.client(host="192.168.11.4", port=8080)
 @gramme.server(8080)
@@ -171,8 +276,12 @@ def my_awsome_data_handler(data):
         print( data)
         if(data[0] == True):
             print("got ping msg")
-            data = [7,[0,0,0,0]]
-            client.send(data)
+            data,s = updateState()
+            client.send( data )
+            if not s.machine:
+                pos = updatePos()
+                client.send(pos)
+
         else:
             npd = Npd(data)
             data_dict = npd.parse_data()
@@ -180,6 +289,8 @@ def my_awsome_data_handler(data):
             if data_dict['device_type'] == "enc":
                 print("got to update encoders")
                 update_encoders(data_dict)
+                data = updatePos()
+                client.send(data)
             if data_dict['device_type'] == 'btn':
                 updateButtons(data_dict)
             if data_dict['device_type'] == 'pot':
@@ -191,7 +302,8 @@ def my_awsome_data_handler(data):
             #data = ['12',22]
             #data = {1,'some crap who knows'}
             #data = [5,"this is a load of crap"]
-            data = [5,[1,2,3,16]]
+            #data = [5,[1,2,3,16]]
+            state_msg = State(system=1, machine=2, motion=3, homed=4)
             client.send(data)
         return 0
     except KeyboardInterrupt:

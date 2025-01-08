@@ -115,6 +115,8 @@ void udp_server_task(void *pvParameters)
 
     while (1) {
 
+
+        /*  no idea what is actually does
         // We got this msg from esp_now, update_ready flag set in enow.c recieve callback
         if(update_ready == 1){
             ESP_LOGI(TAG,"found update\t");
@@ -134,6 +136,7 @@ void udp_server_task(void *pvParameters)
                          (struct sockaddr*)&remote_addr, 
                          addr_len);
         }
+        */
 
         // Receive data (waits for a packet)
         int recv_bytes = recvfrom(sockfd, rx_buffer, sizeof(rx_buffer)-1, MSG_WAITALL, 
