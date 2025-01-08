@@ -85,18 +85,21 @@ void blink_task(void *pvParameters) {
             currentCode = receivedCode;
             blinkStartTime = xTaskGetTickCount();
             blinkCount = 0;
-            if (currentCode == BLINK_NONE){
-                led_strip_clear(led_strip);
-                //led_strip_refresh(led_strip);
-                vTaskDelay(pdMS_TO_TICKS(10));
-                continue;
-            }
-            else if (currentCode == BLINK_OK){
-                led_strip_set_pixel(led_strip, 0, 0, 100,0);
-                led_strip_refresh(led_strip);
-                vTaskDelay(pdMS_TO_TICKS(10));
-                continue;
-            }
+            
+        }
+
+        if (currentCode == BLINK_NONE){
+            led_strip_clear(led_strip);
+            // I think this causes a stack overflow
+            //led_strip_refresh(led_strip);
+            vTaskDelay(pdMS_TO_TICKS(10));
+            continue;
+        }
+        else if (currentCode == BLINK_OK){
+            led_strip_set_pixel(led_strip, 0, 0, 100,0);
+            led_strip_refresh(led_strip);
+            vTaskDelay(pdMS_TO_TICKS(10));
+            continue;
         }
 
         if (currentCode != BLINK_NONE && currentCode != BLINK_OK) {
@@ -124,13 +127,16 @@ void blink_task(void *pvParameters) {
                     }
                 }
             }
-        } else {
+        } 
+        else {
             if(currentCode != lastCode){
                 led_strip_set_pixel(led_strip, 0, 0, 100,0);
                 led_strip_refresh(led_strip);
-                lastCode = currentCode;
+                
             }
-            vTaskDelay(pdMS_TO_TICKS(10));
-            }
+            
         }
-    }
+        lastCode = currentCode;
+        vTaskDelay(pdMS_TO_TICKS(10));
+        } // end while(1)
+}
