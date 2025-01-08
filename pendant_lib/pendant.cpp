@@ -50,6 +50,12 @@ void sendEncUpdate(EncInputData data){
   
 }
 
+void sendPotUpdate(int id){
+
+  packer.serialize(MsgPack::arr_size_t(4),false,"p",id,pots[id].map_value);
+  sendUpdate();
+}
+
 void doReadButtons(){
   for(int i = 0;i < NUM_BUTTONS;i++){
     buttons[i].state = digitalRead(buttons[i].pin);
@@ -66,6 +72,33 @@ void doReadButtons(){
     
   }
 
+}
+
+int mapFloatToInt(float floatValue) {
+  // Check if the float value is within the expected range
+  if (floatValue < 0.0f) {
+    floatValue = 0.0f; // Clamp to minimum
+  } else if (floatValue > 3.3f) {
+    floatValue = 3.3f; // Clamp to maximum
+  }
+
+  // Perform the linear mapping
+  int intValue = map(static_cast<int>(floatValue * 100), 0, 330, 1, 10);
+
+  return intValue;
+}
+
+void doReadPots(){
+    for (int i = 0;i < NUM_POTS;i++){
+        int16_t adc0 = ads.readADC_SingleEnded(i);
+        float volts0 = ads.computeVolts(adc0);
+        int mapped_pot = mapFloatToInt(volts0);
+        pots[i].map_value = mapped_pot;
+        if(pots[i].prev_state != mapped_pot){
+            pots[i].prev_state = mapped_pot;
+            sendPotUpdate(i);
+        }
+    }
 }
 
 void doReadEncoders(bool print){
@@ -134,6 +167,8 @@ enum class MsgType : uint8_t{
     ERRORS = 2,
 };
 
+
+int server_msg_count = 0;
 // callback function that will be executed when new esp-now data is received
 void OnDataRecv(const uint8_t * mac, const uint8_t *incomingData, int len) 
 {
@@ -223,6 +258,10 @@ void OnDataRecv(const uint8_t * mac, const uint8_t *incomingData, int len)
       Serial.printf("FB: VEL0: %d, VEL1: %d, VEL2: %d pot: %d\r\n", fb.vel[0], fb.vel[1], fb.vel[2],analogRead(34));
       */
     }
+    if(server_msg_count == 0){
+        connected = 1;
+    }
+    server_msg_count++;
 }
 
 
@@ -256,5 +295,18 @@ void setupPeer(){
   else {
     Serial.println("ERROR: Could not send an addPeerMessage to remote node. Retry in 5s...");
     espnow_peer_configured = false;
+  }
+}
+
+void sendHello(){
+  packer.serialize(MsgPack::arr_size_t(2),true,"b");
+  esp_err_t result = esp_now_send(remotePeerAddress, packer.data(), packer.size()); // send esp-now addPeerMsg
+  packer.clear();
+
+  if (result == ESP_OK) {
+    Serial.print(".");
+  }else{
+    Serial.println(" couldn't send msg");
+    Serial.println(result);
   }
 }

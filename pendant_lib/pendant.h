@@ -4,14 +4,15 @@
 #include <rom/gpio.h>
 #include <esp_now.h>
 #include <WiFi.h>
-
+#include <Adafruit_ADS1X15.h>
 
 #include <MsgPack.h>
 
 
 enum class InputType{
   Encoder,
-  Button
+  Button,
+  Pot
 };
 
 
@@ -33,6 +34,14 @@ struct BtnInputData{
  bool pending; // flag for sending updates
  int pin; // pin number of the button
 
+};
+
+struct PotInputData{
+    InputType type;
+    int id;
+    int map_value;
+    float volts;
+    int prev_state;
 };
 
 typedef struct espnow_add_peer_msg {
@@ -70,8 +79,10 @@ struct fbPacket {
  
 extern const int NUM_BUTTONS;
 extern const int NUM_ENC;
+extern const int NUM_POTS;
 extern struct BtnInputData buttons[];
 extern struct EncInputData encoders[];
+extern struct PotInputData pots[];
 extern esp_now_peer_info_t peerInfo; 
 extern MsgPack::Packer packer;
 extern uint8_t remotePeerAddress[];
@@ -81,6 +92,8 @@ extern espnow_add_peer_msg espnowAddPeerMsg;
 extern esp_now_peer_info_t peerInfo;
 extern fbPacket fb;
 extern bool espnow_peer_configured;
+extern bool connected;
+extern class Adafruit_ADS1115 ads; 
 
 void setupButtons();
 void setupEnc(ESP32Encoder *encoder,int a, int b);
@@ -94,3 +107,6 @@ void doReadSlow();
 void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) ;
 void OnDataRecv(const uint8_t * mac, const uint8_t *incomingData, int len) ;
 void setupPeer();
+void sendHello();
+void doReadPots();
+void sendPotUpdate();

@@ -28,6 +28,9 @@ Adafruit_ADS1115 ads;  /* Use this for the 16-bit version */
 //#define NUM_BUTTONS 2
 constexpr int NUM_BUTTONS = 2;
 constexpr int NUM_ENC = 1;
+constexpr int NUM_POTS = 1;
+
+bool connected = false;
 
 /* these pins clobber the t-display pins
 
@@ -61,9 +64,7 @@ ESP32Encoder encoder4;
 Ticker readEncoders;
 Ticker readBtns;
 Ticker slowReadEncoders;
-
-
-
+Ticker readPots;
 
 
 //             initilize the structs, why doesn't teh commented code work  gah!@
@@ -99,6 +100,8 @@ EncInputData e4 = {
   EncInputData::ValueType::INT64,
   &encoder4
 };
+//EncInputData encoders[] = {e1,e2,e3,e4};
+EncInputData encoders[] = {e1};
 
 //  THe buttons
 
@@ -122,10 +125,20 @@ BtnInputData b2 = {
 
 BtnInputData buttons[] = {b1,b2};
 
+// Pots
+PotInputData p0 = {
+  InputType::Pot,
+  0, // id
+  0, // mapped value
+  0.0, // volts
+  0 // prev_value
+};
+
+PotInputData pots[] = {p0};
 
 
-//EncInputData encoders[] = {e1,e2,e3,e4};
-EncInputData encoders[] = {e1};
+
+
 
 
 // (84:f7:03:c0:24:38)
@@ -173,7 +186,6 @@ fbPacket fb = { 0 };
 bool espnow_peer_configured = false;
 
 
-
 void mockupIdle(){
 
   //tft.fillScreen(TFT_WHITE);
@@ -192,13 +204,25 @@ void mockupIdle(){
   tft.printf("xdtg: %.4d\n", x_dtg);
   tft.printf("ydtg: %.4d\n", y_dtg);
   tft.printf("lcnc state: %s\n", lcnc_state.c_str());
- tft.println("foo\n" );
- //Serial.println("mock done");
-
-
-  
+  tft.println("foo\n" );
 }
 
+void initScreen(){
+  tft.fillScreen(TFT_RED);
+  tft.setTextColor(TFT_BLACK,TFT_RED,true);
+  tft.setCursor(0,0,2);
+  tft.setTextSize(3);
+  tft.println("Not Connected to Server");
+  tft.printf("Peer connected?",espnow_peer_configured ? "Y":"N");
+}
+
+void idleScreen(){
+  tft.fillScreen(TFT_WHITE);
+  tft.setTextColor(TFT_BLACK,TFT_WHITE,true);
+  tft.setCursor(0,0,2);
+  tft.setTextSize(3);
+  tft.println("Connected");
+}
 
 void setupDisplay(){
   tft.init();
@@ -236,7 +260,7 @@ void setup() {
   // put your setup code here, to run once:
   Serial.begin ( 115200 );
   setupDisplay(); 
-
+  initScreen();
   ESP32Encoder::useInternalWeakPullResistors = puType::up;
 
   // only one encoder on this board
@@ -263,6 +287,7 @@ void setup() {
   readEncoders.attach_ms(10,doReadFast);
 
   readBtns.attach_ms(50,doReadButtons);
+  readPots.attach_ms(100,doReadPots);
   //slowReadEncoders.attach_ms(1000,doReadSlow);
   setupPeer();
 
@@ -292,11 +317,15 @@ void setup() {
 void loop() {
   // put your main code here, to run repeatedly:
   //Serial.println("loop")
-  delay(1000);
-  mockupIdle();
-  adc0 = ads.readADC_SingleEnded(0);
-  float volts0 = ads.computeVolts(adc0);
-  //Serial.printf("adc0: %d, volts: %f\n",adc0,volts0);
+  delay(100);
+  //mockupIdle();
+  if(connected){
+    idleScreen();
+  }
+
+  if(!connected){
+    sendHello();
+  }
 
 }
 

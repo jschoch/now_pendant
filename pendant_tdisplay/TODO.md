@@ -1,3 +1,20 @@
+
+
+1. figoure out some sort of hello/boot protocol to the server_py
+2. detect operation state changes and change screen accordingly.  BG color should be strong signal to user
+3. get some data from lcnc to test with.
+3A. GET OLD PENDANT UPDATED WITH PENDANT.PY LIB
+4. write some tests
+
+
+# Done:
+
+
+
+# not doing
+1. try to connect to wifi at the same time as esp_now for testing.
+
+
 1. use the custom datatypes to deal with msgs from lcnc
 
 ```
@@ -42,18 +59,3 @@ struct LCNC_STATE {
 }
 
 ```
-
-2. detect operation state changes and change screen accordingly.  BG color should be strong signal to user
-3. get some data from lcnc to test with.
-4. write some tests
-
-
-# Done:
-
-
-
-# not doing
-1. try to connect to wifi at the same time as esp_now for testing.
-
-
-
