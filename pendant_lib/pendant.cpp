@@ -3,7 +3,7 @@
 
 #include <iostream>
 #include <esp_now.h>
-#include <variant>
+#include <MsgPack.h>
 
 
 void setupButtons(){
@@ -134,38 +134,7 @@ void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status)
 }
 
 
-// Structs for processing lcnc msgs
 
-struct Ping {
-    uint32_t sequence_number;
-    MSGPACK_DEFINE(sequence_number);// [sequence_number]
-};
-
-struct State {
-    int system;
-    int machine;
-    int motion;
-    int whatever;
-    MSGPACK_DEFINE(system,machine,motion,whatever); // [system,machine,motion]
-};
-
-struct Amsg{
-    int msg_type;
-    State state;
-    MSGPACK_DEFINE(msg_type,state);
-};
-
-struct Errors{
-    int errornumber;
-    String msg;
-    MSGPACK_DEFINE(errornumber,msg);
-};
-
-enum class MsgType : uint8_t{
-    PING = 7,
-    STATE = 5,
-    ERRORS = 2,
-};
 
 
 int server_msg_count = 0;
@@ -176,7 +145,9 @@ void OnDataRecv(const uint8_t * mac, const uint8_t *incomingData, int len)
     MsgPack::Unpacker unpacker;
 
     bool t = unpacker.feed(incomingData,len);
-    Serial.printf("Unpacker worked?  %s\n",t ? "true": "false");
+    //Serial.printf("Unpacker worked?  %s\n",t ? "true": "false");
+
+    /* Testing array
     if(t){
         String s3;
         int i3;
@@ -185,9 +156,10 @@ void OnDataRecv(const uint8_t * mac, const uint8_t *incomingData, int len)
         unpacker.clear();
         Serial.printf("ary  %s : %i\n",s3,i3);
     }
+    */
 
     // Testing map
-
+    /*
     if(t){
         String s4;
         int i4;
@@ -196,6 +168,7 @@ void OnDataRecv(const uint8_t * mac, const uint8_t *incomingData, int len)
         unpacker.clear();
         Serial.printf("map  %s : %i\n",s4,i4);
     }
+    */
 
     if(t){
         uint8_t msg_type;
@@ -205,8 +178,21 @@ void OnDataRecv(const uint8_t * mac, const uint8_t *incomingData, int len)
         unpacker.from_array(msg_type,msg);
         unpacker.clear();
         Serial.printf("Got msg type: %u and array %u",msg_type,sizeof(msg));
+        
+        //YUCK
         if (msg_type == static_cast<uint8_t>(MsgType::PING)){
             Serial.println("got a ping");
+            //  should get some basic machine state with this msg
+            Amsg amsg;
+            unpacker.feed(incomingData, len);
+            //unpacker.from_array(a1,a2,a3,a4);
+            unpacker.deserialize(amsg);
+            Serial.printf("t: %u system: %i machine: %i motion: %i homed: %i\n",amsg.msg_type,amsg.state.system,amsg.state.machine,amsg.state.motion,amsg.state.homed);
+            lastState.system = amsg.state.system;
+            lastState.machine = amsg.state.machine;
+            lastState.motion = amsg.state.motion;
+            lastState.homed = amsg.state.homed;
+
         }else if (msg_type == static_cast<uint8_t>(MsgType::STATE)){
             Serial.println("got a state msg");
             int a1,a2,a3,a4;
@@ -214,12 +200,14 @@ void OnDataRecv(const uint8_t * mac, const uint8_t *incomingData, int len)
             unpacker.feed(incomingData, len);
             //unpacker.from_array(a1,a2,a3,a4);
             unpacker.deserialize(amsg);
-            Serial.printf("t: %u system: %i machine: %i motion: %i whatever: %i\n",amsg.msg_type,amsg.state.system,amsg.state.machine,amsg.state.motion,amsg.state.whatever);
+            Serial.printf("t: %u system: %i machine: %i motion: %i homed: %i\n",amsg.msg_type,amsg.state.system,amsg.state.machine,amsg.state.motion,amsg.state.homed);
         }
         else{
             Serial.println("Unknown msg");
         }
         unpacker.clear();
+    }else{
+        Serial.println("could not unpack data");
     }
     
 
@@ -246,21 +234,21 @@ void OnDataRecv(const uint8_t * mac, const uint8_t *incomingData, int len)
     //lastPacketRxTimeMs = millis();
     //Serial.printf("ESP-NOW RX: %d\r\n", len);
     //espnow_peer_configured = true;
+
+    /*
     if (len == sizeof(myData)) { // if rx example data struct
       memcpy(&myData, incomingData, sizeof(myData));
 
     } else if (len == sizeof(fb)) { // if rx feedback packet struct. Print it for testing
       
-      /*
       memcpy(&fb, incomingData, sizeof(fb));
       Serial.printf("FB: Control: %d, IO: %d, UDPSeq: %d\r\n", fb.control, fb.io, fb.udp_seq_num);
       Serial.printf("FB: POS0: %d, POS1: %d, POS2: %d\r\n", fb.pos[0], fb.pos[1], fb.pos[2]);
       Serial.printf("FB: VEL0: %d, VEL1: %d, VEL2: %d pot: %d\r\n", fb.vel[0], fb.vel[1], fb.vel[2],analogRead(34));
-      */
     }
-    if(server_msg_count == 0){
-        connected = 1;
-    }
+    */
+    connected = 1;
+    lastHello = millis();
     server_msg_count++;
 }
 
@@ -302,6 +290,7 @@ void sendHello(){
   packer.serialize(MsgPack::arr_size_t(2),true,"b");
   esp_err_t result = esp_now_send(remotePeerAddress, packer.data(), packer.size()); // send esp-now addPeerMsg
   packer.clear();
+  //Serial.println("sending ping");
 
   if (result == ESP_OK) {
     Serial.print(".");

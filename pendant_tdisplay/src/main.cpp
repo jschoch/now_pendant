@@ -26,6 +26,7 @@ MsgPack::Packer packer;
 Adafruit_ADS1115 ads;  /* Use this for the 16-bit version */
 
 //#define NUM_BUTTONS 2
+
 constexpr int NUM_BUTTONS = 2;
 constexpr int NUM_ENC = 1;
 constexpr int NUM_POTS = 1;
@@ -65,6 +66,12 @@ Ticker readEncoders;
 Ticker readBtns;
 Ticker slowReadEncoders;
 Ticker readPots;
+Ticker doPings;
+Ticker doScreen;
+
+unsigned long lastHello = millis();
+
+State lastState;
 
 
 //             initilize the structs, why doesn't teh commented code work  gah!@
@@ -208,7 +215,7 @@ void mockupIdle(){
 }
 
 void initScreen(){
-  tft.fillScreen(TFT_RED);
+  
   tft.setTextColor(TFT_BLACK,TFT_RED,true);
   tft.setCursor(0,0,2);
   tft.setTextSize(3);
@@ -217,11 +224,19 @@ void initScreen(){
 }
 
 void idleScreen(){
-  tft.fillScreen(TFT_WHITE);
+  
   tft.setTextColor(TFT_BLACK,TFT_WHITE,true);
   tft.setCursor(0,0,2);
-  tft.setTextSize(3);
-  tft.println("Connected");
+  tft.setTextSize(2);
+  tft.println("Connected, waiting for estop");
+}
+
+void notAutoScreen(){
+  
+  tft.setTextColor(TFT_BLACK,TFT_WHITE,true);
+  tft.setCursor(0,0,2);
+  tft.setTextSize(1);
+  tft.println("estop off");
 }
 
 void setupDisplay(){
@@ -253,6 +268,54 @@ void setupDisplay(){
 
 }
 
+// the screen states
+enum class ScS{
+  INIT,
+  IDLE,
+  NA,
+  A,
+  MDI
+};
+
+ScS lss = ScS::INIT;
+
+void drawScreen(){
+  if(connected){
+    if(lastState.machine){
+      if(lss != ScS::IDLE){
+        tft.fillScreen(TFT_YELLOW);
+        lss = ScS::IDLE;
+      }
+      idleScreen();
+    }
+    else if(lastState.machine == 0){
+      // terrible name
+      if(lss != ScS::NA){
+        tft.fillScreen(TFT_WHITE);
+        lss = ScS::NA;
+      }
+      notAutoScreen();
+    }
+  }else{
+    if(lss != ScS::INIT){
+      tft.fillScreen(TFT_RED);
+      lss= ScS::INIT;
+    } 
+    
+    initScreen();
+  }
+
+}
+
+
+void doPing(){
+  sendHello();
+  int delta = millis() - lastHello;
+  if(delta > 1500){
+    Serial.printf("Connection timeout %i",delta);
+    connected = false;
+  }
+}
 
 
 
@@ -288,6 +351,9 @@ void setup() {
 
   readBtns.attach_ms(50,doReadButtons);
   readPots.attach_ms(100,doReadPots);
+  doPings.attach_ms(1500,doPing);
+  doScreen.attach_ms(20,drawScreen);
+
   //slowReadEncoders.attach_ms(1000,doReadSlow);
   setupPeer();
 
@@ -319,13 +385,7 @@ void loop() {
   //Serial.println("loop")
   delay(100);
   //mockupIdle();
-  if(connected){
-    idleScreen();
-  }
-
-  if(!connected){
-    sendHello();
-  }
+  
 
 }
 

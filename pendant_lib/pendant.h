@@ -75,6 +75,55 @@ struct fbPacket {
     uint32_t udp_seq_num;
 };
 
+// Structs for processing lcnc msgs
+
+
+// should fit in an uint8_t
+enum class MsgType : uint8_t{
+    PING = 7,
+    STATE = 5,
+    ERRORS = 2,
+    POS = 3,
+};
+
+struct Ping {
+    uint32_t sequence_number;
+    MSGPACK_DEFINE(sequence_number);// [sequence_number]
+};
+
+struct State {
+    int system;
+    int machine;
+    int motion;
+    int homed;
+    MSGPACK_DEFINE(system,machine,motion,homed); // [system,machine,motion]
+};
+
+struct Amsg{
+    //int msg_type;
+    uint8_t msg_type;
+    State state;
+    MSGPACK_DEFINE(msg_type,state);
+};
+
+struct Errors{
+    int errornumber;
+    String msg;
+    MSGPACK_DEFINE(errornumber,msg);
+};
+
+struct Pos{
+    float x;
+    float y;
+    float x_dtg;
+    float y_dtg;
+    float jog_scale;
+    int g5x;
+    int jog_counts;
+    MSGPACK_DEFINE(x,y,x_dtg,y_dtg,jog_scale,g5x,jog_counts);
+};
+
+
 
  
 extern const int NUM_BUTTONS;
@@ -94,6 +143,8 @@ extern fbPacket fb;
 extern bool espnow_peer_configured;
 extern bool connected;
 extern class Adafruit_ADS1115 ads; 
+extern unsigned long lastHello;
+extern class State lastState;
 
 void setupButtons();
 void setupEnc(ESP32Encoder *encoder,int a, int b);
