@@ -1,15 +1,18 @@
-
-
-1. figoure out some sort of hello/boot protocol to the server_py
-2. detect operation state changes and change screen accordingly.  BG color should be strong signal to user
-3. get some data from lcnc to test with.
-3A. GET OLD PENDANT UPDATED WITH PENDANT.PY LIB
+1. Detect machine power state
+2. figure out max packet rate to keep latency minimal
+3.  slave btns to axis.N.jog-enable
+4.  deal with resets and jog-counts
+3. GET OLD PENDANT UPDATED WITH PENDANT.PY LIB
 4. write some tests
+4. test python esp_now direct without bridge
 
 
 # Done:
 
+1. figoure out some sort of hello/boot protocol to the server_py
 
+
+2. detect operation state changes and change screen accordingly.  BG color should be strong signal to user
 
 # not doing
 1. try to connect to wifi at the same time as esp_now for testing.

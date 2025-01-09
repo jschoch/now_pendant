@@ -88,13 +88,13 @@ int mapFloatToInt(float floatValue) {
   return intValue;
 }
 
-void doReadPots(){
+void doReadPots(bool forceSend = false){
     for (int i = 0;i < NUM_POTS;i++){
         int16_t adc0 = ads.readADC_SingleEnded(i);
         float volts0 = ads.computeVolts(adc0);
         int mapped_pot = mapFloatToInt(volts0);
         pots[i].map_value = mapped_pot;
-        if(pots[i].prev_state != mapped_pot){
+        if(pots[i].prev_state != mapped_pot || forceSend){
             pots[i].prev_state = mapped_pot;
             sendPotUpdate(i);
         }
@@ -177,7 +177,7 @@ void OnDataRecv(const uint8_t * mac, const uint8_t *incomingData, int len)
         unpacker.feed(incomingData,len);
         unpacker.from_array(msg_type,msg);
         unpacker.clear();
-        Serial.printf("Got msg type: %u and array %u",msg_type,sizeof(msg));
+        //Serial.printf("Got msg type: %u and array %u",msg_type,sizeof(msg));
         
         //YUCK
         if (msg_type == static_cast<uint8_t>(MsgType::PING)){
@@ -195,12 +195,17 @@ void OnDataRecv(const uint8_t * mac, const uint8_t *incomingData, int len)
 
         }else if (msg_type == static_cast<uint8_t>(MsgType::STATE)){
             Serial.println("got a state msg");
-            int a1,a2,a3,a4;
             Amsg amsg;
             unpacker.feed(incomingData, len);
             //unpacker.from_array(a1,a2,a3,a4);
             unpacker.deserialize(amsg);
             Serial.printf("t: %u system: %i machine: %i motion: %i homed: %i\n",amsg.msg_type,amsg.state.system,amsg.state.machine,amsg.state.motion,amsg.state.homed);
+        }else if (msg_type == static_cast<uint8_t>(MsgType::POS)){
+            Pmsg pmsg;
+            unpacker.feed(incomingData, len);
+            unpacker.deserialize(pmsg);
+            Serial.printf("pos msg x: %f",pmsg.msg_type, pmsg.pos.x);
+            lastPos = pmsg.pos;
         }
         else{
             Serial.println("Unknown msg");

@@ -106,6 +106,8 @@ struct Amsg{
     MSGPACK_DEFINE(msg_type,state);
 };
 
+
+
 struct Errors{
     int errornumber;
     String msg;
@@ -114,13 +116,21 @@ struct Errors{
 
 struct Pos{
     float x;
-    float y;
+    float z;
     float x_dtg;
-    float y_dtg;
+    float z_dtg;
     float jog_scale;
     int g5x;
-    int jog_counts;
-    MSGPACK_DEFINE(x,y,x_dtg,y_dtg,jog_scale,g5x,jog_counts);
+    int x_jog_counts;
+    int z_jog_counts;
+    MSGPACK_DEFINE(x,z,x_dtg,z_dtg,jog_scale,g5x,x_jog_counts,z_jog_counts);
+};
+
+struct Pmsg{
+    //int msg_type;
+    uint8_t msg_type;
+    Pos pos;
+    MSGPACK_DEFINE(msg_type,pos);
 };
 
 
@@ -145,6 +155,7 @@ extern bool connected;
 extern class Adafruit_ADS1115 ads; 
 extern unsigned long lastHello;
 extern class State lastState;
+extern class Pos lastPos;
 
 void setupButtons();
 void setupEnc(ESP32Encoder *encoder,int a, int b);
@@ -159,5 +170,5 @@ void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) ;
 void OnDataRecv(const uint8_t * mac, const uint8_t *incomingData, int len) ;
 void setupPeer();
 void sendHello();
-void doReadPots();
+void doReadPots(bool forceSend);
 void sendPotUpdate();

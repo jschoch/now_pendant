@@ -27,7 +27,7 @@ Adafruit_ADS1115 ads;  /* Use this for the 16-bit version */
 
 //#define NUM_BUTTONS 2
 
-constexpr int NUM_BUTTONS = 2;
+constexpr int NUM_BUTTONS = 7;
 constexpr int NUM_ENC = 1;
 constexpr int NUM_POTS = 1;
 
@@ -50,10 +50,8 @@ int enc1a = 12;
 int enc1b = 13;
 
 
-// Don't use 36,39 there are no pullups
-// The builtin buttons on the t-display
-int btn1 = 0; // 
-int btn2 = 34;  // 
+
+
 
 int16_t adc0, adc1, adc2, adc3;
 
@@ -72,6 +70,7 @@ Ticker doScreen;
 unsigned long lastHello = millis();
 
 State lastState;
+Pos lastPos;
 
 
 //             initilize the structs, why doesn't teh commented code work  gah!@
@@ -112,25 +111,80 @@ EncInputData encoders[] = {e1};
 
 //  THe buttons
 
+// Don't use 36..39 there are no pullups
+// The builtin buttons on the t-display
+int btn0 = 0; // 
+int btn1 = 34;  // 
+int btn2 = 17;
+int btn3 = 2;
+int btn4 = 15;
+int btn5 = 33;
+int btn6 =  26;
 
-BtnInputData b1 = {
+BtnInputData b0 = {
   InputType::Button,
   0, // button ID
   1, // current state of the button
   1, // previous state of the button
   0, // pending state
-  btn1
+  btn0
 };
-BtnInputData b2 = {
+BtnInputData b1 = {
   InputType::Button,
   1, // button ID
   1, // current state of the button
   1, // previous state of the button
   0, // pending state
-  btn2
+  btn1 // pin
 };
 
-BtnInputData buttons[] = {b1,b2};
+BtnInputData b2{
+  InputType::Button,
+  2, // button ID
+  1, // current state of the button
+  1, // previous state of the button
+  0, // pending state
+  btn2// pin
+};
+
+BtnInputData b3 = {
+  InputType::Button,
+  3, // button ID
+  1, // current state of the button
+  1, // previous state of the button
+  0, // pending state
+  btn3 // pin
+};
+
+BtnInputData b4 = {
+  InputType::Button,
+  4, // button ID
+  1, // current state of the button
+  1, // previous state of the button
+  0, // pending state
+  btn4 // pin
+};
+
+BtnInputData b5 = {
+  InputType::Button,
+  5, // button ID
+  1, // current state of the button
+  1, // previous state of the button
+  0, // pending state
+  btn5 // pin
+};
+
+BtnInputData b6 = {
+  InputType::Button,
+  6, // button ID
+  1, // current state of the button
+  1, // previous state of the button
+  0, // pending state
+  btn6 // pin
+};
+
+
+BtnInputData buttons[] = {b0, b1,b2,b3,b4,b5,b6};
 
 // Pots
 PotInputData p0 = {
@@ -144,26 +198,9 @@ PotInputData p0 = {
 PotInputData pots[] = {p0};
 
 
-
-
-
-
 // (84:f7:03:c0:24:38)
 uint8_t remotePeerAddress[] = {0x84, 0xf7, 0x03, 0xc0, 0x24, 0x38}; // TODO: Implement broadcast with security
 //uint8_t remotePeerAddress[] = {0x24, 0xD7, 0xEB, 0xB7, 0xA7, 0x2C}; // TODO: Implement broadcast with security
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
  /*
@@ -172,10 +209,6 @@ uint8_t remotePeerAddress[] = {0x84, 0xf7, 0x03, 0xc0, 0x24, 0x38}; // TODO: Imp
     //Serial.printf("1: %" PRId64 " 2: %" PRId64 " 3: %" PRId64 " 4: %" PRId64 " ",c1,c2,c3,c4);
   }
   */
-
-
-
-
 
 
 //typedef struct 
@@ -235,8 +268,12 @@ void notAutoScreen(){
   
   tft.setTextColor(TFT_BLACK,TFT_WHITE,true);
   tft.setCursor(0,0,2);
-  tft.setTextSize(1);
-  tft.println("estop off");
+  tft.setTextSize(2);
+  // You should only do DTG in auto and mdi modes
+  //tft.printf("X: %f Z: %f XDTG: %f ZDTG: %f",lastPos.x,lastPos.z,lastPos.x_dtg, lastPos.z_dtg);
+  tft.printf("X:  %07.2f \nZ:  %07.2f\n",lastPos.x,lastPos.z);
+  tft.printf("Jog: %1.3f\n",lastPos.jog_scale);
+  tft.printf("t: %i",millis());
 }
 
 void setupDisplay(){
@@ -293,6 +330,9 @@ void drawScreen(){
       if(lss != ScS::NA){
         tft.fillScreen(TFT_WHITE);
         lss = ScS::NA;
+        // we should send the pot position here, but also where else on lcnc startup it will have the wrong value
+        // TODO readd ads
+        doReadPots(true);
       }
       notAutoScreen();
     }
@@ -305,6 +345,11 @@ void drawScreen(){
     initScreen();
   }
 
+}
+
+void doReadPotsHack(){
+  // arg
+  doReadPots(false);
 }
 
 
@@ -346,28 +391,10 @@ void setup() {
   esp_now_register_recv_cb(OnDataRecv);
 
 
-  // Polling Interval is this timer's value in ms
-  readEncoders.attach_ms(10,doReadFast);
-
-  readBtns.attach_ms(50,doReadButtons);
-  readPots.attach_ms(100,doReadPots);
-  doPings.attach_ms(1500,doPing);
-  doScreen.attach_ms(20,drawScreen);
-
-  //slowReadEncoders.attach_ms(1000,doReadSlow);
-  setupPeer();
-
-
-  // THis didn't work
-  //TwoWire tw = TwoWire(1); // bus 1
-  //tw.setPins(21,17); // SDA, SCL
-  //tw.setClock(400000); // 400kHz clock speed
-  //tw.begin(); // Start I2C
-
-
-
   //if (!ads.begin(0x48,&tw)) {
   // use standard pins SDA 21 and SCL 22
+
+  // TODO add ads back
   if(!ads.begin()) {
 
     Serial.println("Failed to initialize ADS.");
@@ -376,7 +403,25 @@ void setup() {
     Serial.println("ADS1115 initialized.");
 
   }
+
+  // Polling Interval is this timer's value in ms
+  readEncoders.attach_ms(20,doReadFast);
+
+  readBtns.attach_ms(50,doReadButtons);
+  readPots.attach_ms(100,doReadPotsHack);
+  doPings.attach_ms(1500,doPing);
+  doScreen.attach_ms(20,drawScreen);
+
+  //slowReadEncoders.attach_ms(1000,doReadSlow);
+  setupPeer();
+
+
+  
+
+
+  
   Serial.println("setup done");
+
   
 }
 
@@ -384,6 +429,15 @@ void loop() {
   // put your main code here, to run repeatedly:
   //Serial.println("loop")
   delay(100);
+
+  /*
+  bool a = digitalRead(enc1a);
+  bool b = digitalRead(enc1b);
+  Serial.printf("Enc v: %i  \n",encoders[0].encoder->getCount());
+  Serial.printf(" a: %s b: %s",a ? "H":"L",b ? "H":"L");
+  */
+
+  
   //mockupIdle();
   
 
