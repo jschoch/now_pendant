@@ -63,7 +63,7 @@ for port in range(6):
 
 # Mapped pot, range 1..10, but could be 1..(size of S32)
 
-for port in range(1):
+for port in range(2):
     c.newpin("mpot-in-%02d" % port, hal.HAL_S32, hal.HAL_OUT) 
     #c.newparam("mpot-in-%02d" % port, hal.HAL_S32, hal.HAL_OUT)
 
@@ -251,6 +251,40 @@ def updateButtons(data_dict):
         hal.set_p("axis.x.jog-enable", st_bool)
     if btn_id == 4:
         hal.set_p("axis.z.jog-enable", st_bool)
+    
+def map_value(input_value, in_min, in_max, out_min, out_max):
+  """
+  Maps an input value from one range to another.
+
+  Args:
+    input_value: The value to be mapped.
+    in_min: The minimum value of the input range.
+    in_max: The maximum value of the input range.
+    out_min: The minimum value of the output range.
+    out_max: The maximum value of the output range.
+
+  Returns:
+    The mapped output value.
+  """
+  return (input_value - in_min) * (out_max - out_min) / (in_max - in_min) + out_min
+
+def map_valuef(input_value, in_min, in_max, out_min, out_max):
+  """
+  Maps an input value from one range to another.
+
+  Args:
+    input_value: The value to be mapped.
+    in_min: The minimum value of the input range.
+    in_max: The maximum value of the input range.
+    out_min: The minimum value of the output range.
+    out_max: The maximum value of the output range.
+
+  Returns:
+    The mapped output value.
+  """
+  return ((input_value - in_min) / (in_max - in_min)) * (out_max - out_min) + out_min
+
+
 
 def updatePots(data_dict):
     pot_id = data_dict['device_id']
@@ -259,7 +293,12 @@ def updatePots(data_dict):
     c["mpot-in-%02d" %pot_id] = v
     if(pot_id == 0):
         c['jog-scale'] = pot_map[v]
-        None
+    if(pot_id == 1):
+        val = int(map_value(v,0,49,0,200))
+        s_val = str(val)
+        print(f"counts to {s_val}")
+        hal.set_p("halui.feed-override.counts", s_val)
+        
 
 def updateState():
     global stat
