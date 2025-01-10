@@ -25,6 +25,9 @@ MsgPack::Packer packer;
 
 Adafruit_ADS1115 ads;  /* Use this for the 16-bit version */
 
+#include <driver/adc.h>
+#include "esp_adc_cal.h"
+
 //#define NUM_BUTTONS 2
 
 constexpr int NUM_BUTTONS = 7;
@@ -33,6 +36,7 @@ constexpr int NUM_POTS = 2;
 
 bool connected = false;
 
+float battery_voltage = 0.0;
 /* these pins clobber the t-display pins
 
 
@@ -66,6 +70,7 @@ Ticker slowReadEncoders;
 Ticker readPots;
 Ticker doPings;
 Ticker doScreen;
+Ticker doBat;
 
 unsigned long lastHello = millis();
 
@@ -292,6 +297,7 @@ void notAutoScreen(){
   tft.printf("Jog: %1.3f\n",lastPos.jog_scale);
   tft.setTextSize(1);
   tft.printf("t: %i",millis());
+  tft.printf("  vbat: %f\n",battery_voltage);
 }
 
 void setupDisplay(){
@@ -313,7 +319,7 @@ void setupDisplay(){
   tft.println("foo bar");
 
   tft.fillScreen(TFT_BLACK);
-  tft.setRotation(3);
+  tft.setRotation(1);
   tft.setTextSize(1);
 
   // Set the font
@@ -365,9 +371,20 @@ void drawScreen(){
 
 }
 
+void doReadBat(){
+  digitalWrite(14, HIGH);
+  delay(1);
+  float measurement = (float) analogRead(34);
+  battery_voltage = (measurement / 4095.0) * 7.26;
+  digitalWrite(14, LOW);
+  //Serial.println(battery_voltage);
+}
+
+
 void doReadPotsHack(){
   // arg
   doReadPots(false);
+  
 }
 
 
@@ -429,8 +446,16 @@ void setup() {
   readPots.attach_ms(100,doReadPotsHack);
   doPings.attach_ms(1500,doPing);
   doScreen.attach_ms(20,drawScreen);
+  doBat.attach_ms(1000,doReadBat);
 
   //slowReadEncoders.attach_ms(1000,doReadSlow);
+
+  // BATTERY STUFF
+
+  esp_adc_cal_characteristics_t adc_chars;
+  esp_adc_cal_value_t val_type = esp_adc_cal_characterize((adc_unit_t)ADC_UNIT_1, (adc_atten_t)ADC_ATTEN_DB_2_5, (adc_bits_width_t)ADC_WIDTH_BIT_12, 1100, &adc_chars);
+  pinMode(14, OUTPUT);
+
   setupPeer();
 
 
