@@ -29,7 +29,7 @@ Adafruit_ADS1115 ads;  /* Use this for the 16-bit version */
 
 constexpr int NUM_BUTTONS = 7;
 constexpr int NUM_ENC = 1;
-constexpr int NUM_POTS = 1;
+constexpr int NUM_POTS = 2;
 
 bool connected = false;
 
@@ -192,10 +192,21 @@ PotInputData p0 = {
   0, // id
   0, // mapped value
   0.0, // volts
-  0 // prev_value
+  0, // prev_value
+  10 // map size (range for mapping volts)
 };
 
-PotInputData pots[] = {p0};
+PotInputData p1 = {
+  InputType::Pot,
+  1, // id
+  0, // mapped value
+  0.0, // volts
+  0, // prev_value
+  50 // map size
+};
+
+
+PotInputData pots[] = {p0,p1};
 
 
 // (84:f7:03:c0:24:38)
@@ -271,8 +282,15 @@ void notAutoScreen(){
   tft.setTextSize(2);
   // You should only do DTG in auto and mdi modes
   //tft.printf("X: %f Z: %f XDTG: %f ZDTG: %f",lastPos.x,lastPos.z,lastPos.x_dtg, lastPos.z_dtg);
-  tft.printf("X:  %07.2f \nZ:  %07.2f\n",lastPos.x,lastPos.z);
+  if(lastState.homed){
+    tft.printf("X:  %07.2f \nZ:  %07.2f\n",lastPos.x,lastPos.z);
+  }
+  else{
+    tft.println("Not Homed, cant' mpg jog");
+  }
+
   tft.printf("Jog: %1.3f\n",lastPos.jog_scale);
+  tft.setTextSize(1);
   tft.printf("t: %i",millis());
 }
 

@@ -74,7 +74,7 @@ void doReadButtons(){
 
 }
 
-int mapFloatToInt(float floatValue) {
+int mapFloatToInt(float floatValue,int map_size) {
   // Check if the float value is within the expected range
   if (floatValue < 0.0f) {
     floatValue = 0.0f; // Clamp to minimum
@@ -83,7 +83,7 @@ int mapFloatToInt(float floatValue) {
   }
 
   // Perform the linear mapping
-  int intValue = map(static_cast<int>(floatValue * 100), 0, 330, 1, 10);
+  int intValue = map(static_cast<int>(floatValue * 100), 0, 330, 1, map_size);
 
   return intValue;
 }
@@ -92,7 +92,7 @@ void doReadPots(bool forceSend = false){
     for (int i = 0;i < NUM_POTS;i++){
         int16_t adc0 = ads.readADC_SingleEnded(i);
         float volts0 = ads.computeVolts(adc0);
-        int mapped_pot = mapFloatToInt(volts0);
+        int mapped_pot = mapFloatToInt(volts0,pots[i].map_size);
         pots[i].map_value = mapped_pot;
         if(pots[i].prev_state != mapped_pot || forceSend){
             pots[i].prev_state = mapped_pot;
@@ -188,6 +188,7 @@ void OnDataRecv(const uint8_t * mac, const uint8_t *incomingData, int len)
             //unpacker.from_array(a1,a2,a3,a4);
             unpacker.deserialize(amsg);
             Serial.printf("t: %u system: %i machine: %i motion: %i homed: %i\n",amsg.msg_type,amsg.state.system,amsg.state.machine,amsg.state.motion,amsg.state.homed);
+
             lastState.system = amsg.state.system;
             lastState.machine = amsg.state.machine;
             lastState.motion = amsg.state.motion;

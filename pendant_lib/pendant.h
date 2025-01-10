@@ -42,6 +42,7 @@ struct PotInputData{
     int map_value;
     float volts;
     int prev_state;
+    int map_size;
 };
 
 typedef struct espnow_add_peer_msg {
