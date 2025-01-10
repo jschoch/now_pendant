@@ -24,7 +24,7 @@ pinmap = [4,5,6,7,8,9] #
 btnpinmap = [0,1]
 dacpinmap = [3]  # DAC fixed
 nout = 5
-num_btns = 2
+num_btns = 7
 
 encoder_map = {
     0: 0.0,
@@ -83,9 +83,10 @@ for i in range(5):
 c.newpin("jog-scale",hal.HAL_FLOAT, hal.HAL_IN)
 c.newpin("thetest-1",hal.HAL_BIT, hal.HAL_IN)
 
+c.ready()
 c['jog-scale'] = encoder_map[5]
 
-c.ready()
+
 print("now_pendant pin setup done")
 noupdates = 0
 
@@ -110,10 +111,12 @@ class MsgType:
 #        self.motion = motion
 #        self.homed = homed 
 
+
 @dataclass
 class Ping:
     sequence_number: int
 
+#TODO: this sucks, should use bits not whole ints here
 @dataclass
 class State:
     system: int
@@ -150,14 +153,14 @@ def updatePos():
     # current trajectory position, (x y z a b c u v w) in machine units. 
 
     spos = stat.actual_position
-    print(f"spos: {spos}")
+    #print(f"spos: {spos}")
     pos = Pos()
     pos.x = spos[0]
     pos.z = spos[2]
     pos.x_jog_counts = hal.get_value("axis.x.jog-counts")
     pos.z_jog_counts = hal.get_value("axis.z.jog-counts")
     pos.jog_scale = hal.get_value("axis.x.jog-scale")
-    print(f"pos: {pos}")
+    #print(f"pos: {pos}")
     pos_dict = asdict(pos) 
     pos_array = list(pos_dict.values())
     data = [MsgType.POS,pos_array]
@@ -198,9 +201,9 @@ def update_encoders(data_dict):
     #       this could lead to violent jogging, need to fix
     global updating 
     global noupdates
-    if(updating or noupdates):
-        print(f"skip {updating} {noupdates}")
-        return;
+    #if(updating or noupdates):
+        #print(f"skip {updating} {noupdates}")
+        #return;
     updating = 1
     global ticker
     global sel_prev
@@ -210,8 +213,13 @@ def update_encoders(data_dict):
     enc_count = data_dict['count']
     print (f"updating encoder {enc_id} t: {type(enc_id)} count: {enc_count} t{type(enc_count)}")
     c['mpg-count-%02d'% enc_id]   = data_dict['count']
+
+    # TODO:  how do i deal with the 2 versions here, 1 with just enc1 and the other with thsi special enc4 for setting jog-scale?
+
+    if hal.get_value("now_pendant.digital-in-04-not"):
+       c["mpg-count-02"] = enc_count
+
     if(enc_id == 4):
-        
         prev_count = data_dict['prev_count']
         count = data_dict['count']
         diff = sel_prev - count
@@ -224,14 +232,25 @@ def update_encoders(data_dict):
             ticker = scale_ticker(ticker,1)
             c['jog-scale'] = encoder_map[ticker]
             sel_prev = count 
+    
     updating = 0
 
 def updateButtons(data_dict):
     global updating 
     global noupdates
+    global stat
+    stat.poll()
     btn_id = data_dict['device_id']
     print(f"btn pressed {btn_id}")
     c["digital-in-%02d" % btn_id] = data_dict['state']
+    c["digital-in-%02d-not" % btn_id] = not data_dict['state']
+    # set_p exects string as 2nd arg
+    int_state = int( not data_dict['state'])
+    st_bool = str(int_state)
+    if btn_id == 5:
+        hal.set_p("axis.x.jog-enable", st_bool)
+    if btn_id == 4:
+        hal.set_p("axis.z.jog-enable", st_bool)
 
 def updatePots(data_dict):
     pot_id = data_dict['device_id']
@@ -246,9 +265,10 @@ def updateState():
     global stat
     stat.poll()
 
-    print(f"lcnc estop\n\t{stat.estop}")
-    print(f"lcnc homed\n\t{stat.homed}")
-    state_msg = State(0,stat.estop,0,0)
+    is_homed = 0
+    if(stat.homed[0] and stat.homed[1]):
+        is_homed = 1
+    state_msg = State(hal.get_value('rio.sys-status'),stat.estop,0,is_homed)
     
     #state_msg = State(
     #    system=c["rio.sys-status"], 
@@ -257,7 +277,7 @@ def updateState():
     #    motion=0, #  not sure what to put here
     #    home=c["motion.is-all-homed"])
 
-    print(f"Update state {state_msg}")
+    #print(f"Update state {state_msg}")
 
     data = [
         7,[
@@ -272,10 +292,11 @@ def updateState():
 client = gramme.client(host="192.168.11.4", port=8080)
 @gramme.server(8080)
 def my_awsome_data_handler(data):
+    global stat
     try:
-        print( data)
+        #print( data)
         if(data[0] == True):
-            print("got ping msg")
+            #print("got ping msg")
             data,s = updateState()
             client.send( data )
             if not s.machine:
@@ -289,11 +310,12 @@ def my_awsome_data_handler(data):
             if data_dict['device_type'] == "enc":
                 print("got to update encoders")
                 update_encoders(data_dict)
+                stat.poll()
                 data = updatePos()
                 client.send(data)
-            if data_dict['device_type'] == 'btn':
+            elif data_dict['device_type'] == 'btn':
                 updateButtons(data_dict)
-            if data_dict['device_type'] == 'pot':
+            elif data_dict['device_type'] == 'pot':
                 updatePots(data_dict)
             else:
                 print("Unknown data type")
