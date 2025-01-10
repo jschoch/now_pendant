@@ -268,7 +268,7 @@ def updateState():
     is_homed = 0
     if(stat.homed[0] and stat.homed[1]):
         is_homed = 1
-    state_msg = State(hal.get_value('rio.sys-status'),stat.estop,0,is_homed)
+    state_msg = State(int(hal.get_value('rio.sys-status')),int(stat.estop),0,is_homed)
     
     #state_msg = State(
     #    system=c["rio.sys-status"], 
