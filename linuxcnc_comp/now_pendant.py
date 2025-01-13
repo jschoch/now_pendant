@@ -85,6 +85,8 @@ c.newpin("thetest-1",hal.HAL_BIT, hal.HAL_IN)
 
 c.ready()
 c['jog-scale'] = encoder_map[5]
+hal.set_p("halui.feed-override.scale", "0.01")
+hal.set_p("halui.feed-override.direct-value","1")
 
 
 print("now_pendant pin setup done")

@@ -25,12 +25,12 @@
 static const char *TAG = "BRIDGE";
 
 void print_espnow_peer_addr(const esp_now_peer_info_t* addr) {
-  ESP_LOGE(TAG, "Peer Address:");
+  ESP_LOGI(TAG, "Peer Address:");
   char mac_str[18] = {0}; // Buffer to hold MAC address in string format
   sprintf(mac_str, "%02X:%02X:%02X:%02X:%02X:%02X", 
           addr->peer_addr[0], addr->peer_addr[1], addr->peer_addr[2], 
           addr->peer_addr[3], addr->peer_addr[4], addr->peer_addr[5]);
-  ESP_LOGE(TAG, "  - MAC Address: %s", mac_str);
+  ESP_LOGI(TAG, "  - MAC Address: %s", mac_str);
 }
 
 ESP_NOW_test_data_t ESP_NOW_data;
@@ -113,10 +113,10 @@ void example_espnow_recv_cb(const esp_now_recv_info_t *recv_info, const uint8_t 
       memcpy(peer.peer_addr, recv_info->src_addr, ESP_NOW_ETH_ALEN);
       esp_err_t e = esp_now_add_peer(&peer);
       ESP_ERROR_CHECK( e );
-      ESP_LOGE(TAG, "New peer added: ");
+      ESP_LOGI(TAG, "New peer added: ");
       // Print the MAC address of the new peer
       for (int i = 0; i < ESP_NOW_ETH_ALEN; i++) {
-        printf("%02x:", recv_info->src_addr[i]);
+        ESP_LOGI(TAG,"%02x:", recv_info->src_addr[i]);
       }
       peer_info_t pi;
       pi.peer = peer;
